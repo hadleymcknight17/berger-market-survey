@@ -1,23 +1,12 @@
 [build]
   publish = "."
 
+[functions]
+  directory = "netlify/functions"
+
 [[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-
-[[redirects]]
-  from = "/api/read"
-  to = "https://default1db98bc4adb94ed397fc842ca77aa7.b7.environment.api.powerplatform.com/powerautomate/automations/direct/workflows/4cf0216798914fb1ac71dbc84b5b8858/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mcQXknOD1gYu1bkvIlWD3pudNUcJxcUkpFlC6o2AJVo"
-  status = 200
-  force = true
-  headers = {X-Custom-Proxy = "true"}
-
-[[redirects]]
-  from = "/api/add-property"
-  to = "https://default1db98bc4adb94ed397fc842ca77aa7.b7.environment.api.powerplatform.com/powerautomate/automations/direct/workflows/fd341300edd74421b11093197bd53a72/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=RStDbIBEmcK93rEP-onpgrrAmhQYlcowEWCcfI18UIY"
-  status = 200
-  force = true
-  headers = {X-Custom-Proxy = "true"}
