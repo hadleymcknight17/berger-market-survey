@@ -877,19 +877,19 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <div class="amenity-text-grid">
           <div class="amenity-text-item">
             <span class="amenity-text-label">Rentable Garages</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Rentable_Garages" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="e.g. $150/mo, Included, N/A" id="am_Rentable_Garages">
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Rentable Carports</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Rentable_Carports" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="e.g. $75/mo, Included, N/A" id="am_Rentable_Carports">
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Rentable Storage</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Rentable_Storage" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="e.g. $50/mo, Included, N/A" id="am_Rentable_Storage">
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Reserved Parking Spot</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Reserved_Parking_Spot" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="e.g. $100/mo, Included, N/A" id="am_Reserved_Parking_Spot">
           </div>
           </div>
         </div>
@@ -964,7 +964,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <input type="file" id="ann-photo-input" multiple accept="image/*" style="display:none" onchange="handleFileSelect(event,'annual')">
         </div>
         <div class="photo-preview-grid" id="photo-preview-annual"></div>
-        <div class="field-group">
+        <div class="field-group" id="ann-impression-group">
           <label>Overall Impression Notes</label>
           <textarea placeholder="First impressions, curb appeal, property condition, staff observations..."></textarea>
         </div>
@@ -972,7 +972,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     </div>
 
     <!-- Section E: Notes -->
-    <div class="form-section">
+    <div class="form-section" id="ann-section-d">
       <div class="section-header blue">
         <div class="section-icon">📝</div>
         <div><div class="section-title">Section D — Additional Notes</div></div>
@@ -1774,6 +1774,10 @@ function setAnnualEntryType(type) {
   const mgmtField = document.getElementById('ann-mgmt-company');
   const warning = document.getElementById('ann-subject-warning');
 
+  const impressionGroup = document.getElementById('ann-impression-group');
+  const sectionD = document.getElementById('ann-section-d');
+  const unitsField = document.getElementById('ann-total-units');
+
   if (type === 'subject') {
     subjBtn.style.border = '2px solid var(--berger-blue)';
     subjBtn.style.background = 'var(--blue-pale)';
@@ -1789,8 +1793,13 @@ function setAnnualEntryType(type) {
       if (compNameField) { compNameField.value = propName; compNameField.readOnly = true; compNameField.style.background = 'var(--gray-50)'; }
       if (compAddrField) { compAddrField.value = propData.address + ', ' + propData.cityState; compAddrField.readOnly = true; compAddrField.style.background = 'var(--gray-50)'; }
       if (mgmtField && !mgmtField.value) mgmtField.value = 'Berger Communities';
+      if (unitsField && propData.units) { unitsField.value = propData.units; }
     }
     if (distRow) distRow.style.display = 'none';
+
+    // Hide impression notes and Section D for subject
+    if (impressionGroup) impressionGroup.style.display = 'none';
+    if (sectionD) sectionD.style.display = 'none';
 
     // Check for existing subject entry
     checkExistingSubject(propName);
@@ -1804,8 +1813,26 @@ function setAnnualEntryType(type) {
 
     if (compNameField) { compNameField.value = ''; compNameField.readOnly = false; compNameField.style.background = '#fff'; }
     if (compAddrField) { compAddrField.value = ''; compAddrField.readOnly = false; compAddrField.style.background = '#fff'; }
+    if (unitsField) { unitsField.value = ''; }
     if (distRow) distRow.style.display = '';
     if (warning) warning.style.display = 'none';
+
+    // Clear all comp fields so subject data doesn't carry over
+    const clearIds = ['ann-total-units', 'ann-year-built', 'ann-quality-tier', 'ann-product-type',
+      'ann-mgmt-company', 'ann-website', 'ann-school-district', 'ann-distance'];
+    clearIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    // Clear year renovated (no ID, uses placeholder selector)
+    const yrReno = document.querySelector('#screen-annual input[placeholder="e.g. 2022"]');
+    if (yrReno) yrReno.value = '';
+    // Clear revenue management radio
+    document.querySelectorAll('input[name="ann-rev-mgmt"]').forEach(r => r.checked = false);
+
+    // Show impression notes and Section D for competitor
+    if (impressionGroup) impressionGroup.style.display = '';
+    if (sectionD) sectionD.style.display = '';
   }
 }
 
@@ -2373,10 +2400,10 @@ function submitAnnual() {
     monthlyPetRent1:   cleanVal(gv('am_Monthly_Pet_Rent___1_Pet')),
     monthlyPetRent2:   cleanVal(gv('am_Monthly_Pet_Rent___2_Pets')),
     amenityFee:        cleanVal(gv('am_Amenity_Fee')),
-    rentableGarages:   cleanVal(gv('am_Rentable_Garages')),
-    rentableCarports:  cleanVal(gv('am_Rentable_Carports')),
-    rentableStorage:   cleanVal(gv('am_Rentable_Storage')),
-    reservedParkingSpot: cleanVal(gv('am_Reserved_Parking_Spot')),
+    rentableGarages:   gv('am_Rentable_Garages'),
+    rentableCarports:  gv('am_Rentable_Carports'),
+    rentableStorage:   gv('am_Rentable_Storage'),
+    reservedParkingSpot: gv('am_Reserved_Parking_Spot'),
     flatRateFee:       cleanVal(gv('am_Flat_Rate_Fee')),
     utilWater:         gv('am_Water'),
     utilSewer:         gv('am_Sewer'),
@@ -2830,6 +2857,7 @@ function validateForm(form) {
     const occ = document.getElementById('subj-occupancy')?.value;
     if (!occ)   errors.push('Subject Property Occupancy is required');
   } else {
+    const isSubjectMode = (typeof annualEntryType !== 'undefined' && annualEntryType === 'subject');
     const annFields = [
       ['ann-your-property',    'Your Property'],
       ['ann-comp-name',        'Property Name'],
@@ -2841,8 +2869,10 @@ function validateForm(form) {
       ['ann-mgmt-company',     'Management Company'],
       ['ann-website',          'Website'],
       ['ann-school-district',  'School District'],
-      ['ann-distance',         'Distance from Subject'],
     ];
+    if (!isSubjectMode) {
+      annFields.push(['ann-distance', 'Distance from Subject']);
+    }
     annFields.forEach(([id, label]) => {
       const el = document.getElementById(id);
       if (!el) return;
