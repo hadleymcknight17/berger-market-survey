@@ -2133,8 +2133,20 @@ function showScreen(name) {
   const pf = document.getElementById('progressFill');
   if (pf) pf.style.width = '0%';
   if (name==='instructions') { document.getElementById('screen-instructions').style.display='block'; window.scrollTo(0,0); return; }
-  if (name==='dashboard') { document.getElementById('screen-dashboard').style.display='block'; renderDashboard().catch(err => console.error('Dashboard error:', err)); window.scrollTo(0,0); return; }
-  if (name==='admin') { document.getElementById('screen-admin').style.display='block'; renderAdminView().catch(err => console.error('Admin error:', err)); window.scrollTo(0,0); return; }
+  if (name==='dashboard') {
+    console.log('Showing dashboard screen');
+    document.getElementById('screen-dashboard').style.display='block';
+    window.scrollTo(0,0);
+    try { if (typeof renderDashboard === 'function') renderDashboard().catch(err => console.error('Dashboard render error:', err)); else console.warn('renderDashboard not yet defined'); } catch(e) { console.error('Dashboard call error:', e); }
+    return;
+  }
+  if (name==='admin') {
+    console.log('Showing admin screen');
+    document.getElementById('screen-admin').style.display='block';
+    window.scrollTo(0,0);
+    try { if (typeof renderAdminView === 'function') renderAdminView().catch(err => console.error('Admin render error:', err)); else console.warn('renderAdminView not yet defined'); } catch(e) { console.error('Admin call error:', e); }
+    return;
+  }
   if (name==='landing') {
     document.getElementById('screen-landing').style.display = 'flex';
     renderLandingTags();
@@ -2853,14 +2865,16 @@ function validateForm(form) {
 
 // ── Admin view ───────────────────────────────────────────────────────────────
 function promptAdmin() {
+  console.log('promptAdmin called');
   const modal = document.getElementById('pin-modal');
   const input = document.getElementById('pin-input');
   const err   = document.getElementById('pin-error');
-  if (!modal) return;
+  if (!modal) { console.error('pin-modal not found'); alert('Admin modal not found — please refresh the page.'); return; }
+  if (!input) { console.error('pin-input not found'); return; }
   input.value = '';
-  err.textContent = '';
+  if (err) err.textContent = '';
   modal.style.display = 'flex';
-  setTimeout(() => input.focus(), 100);
+  setTimeout(() => { try { input.focus(); } catch(e) {} }, 100);
 }
 
 function checkPin() {
@@ -3001,11 +3015,11 @@ showScreen('landing');
         </div>
         <div style="background:#FFF5F5;border:1.5px solid #F5C5C5;border-radius:10px;padding:18px">
           <div style="font-weight:700;color:var(--berger-red);margin-bottom:8px;font-size:14px">🗂️ Annual Comp Profile</div>
-          <p style="font-size:13px;color:var(--gray-600);line-height:1.7;margin:0">Completed once per year for each property. This sets up your database — amenities, fees, contact info, and property details. Once done, it pre-fills your monthly surveys automatically.</p>
+          <p style="font-size:13px;color:var(--gray-600);line-height:1.7;margin:0">Complete for <strong>your subject property</strong> and <strong>each competitor</strong> in your market. This sets up your database — amenities, fees, utilities, and property details. The subject profile enables side-by-side comparison on the dashboard.</p>
         </div>
       </div>
       <div style="margin-top:16px;padding:12px 16px;background:#FFFBEA;border:1.5px solid #F6E05E;border-radius:8px;font-size:13px;color:#744210">
-        <strong>First time using the portal?</strong> Start with the Annual Comp Profile for each of your properties. Once those are saved, your Monthly Survey checklist will be ready to go. After that, return to update a property's profile any time you notice changes — a new amenity, a fee increase, a renovation. Think of it as a living record, not a once-a-year task.
+        <strong>First time using the portal?</strong> Start with the Annual Profile. You need to complete <strong>two types of profiles</strong>: one for your <strong>subject property</strong> (your Berger property) and one for <strong>each competitor</strong> in your market. Use the Subject / Competitor toggle at the top of the Annual Profile form. Once all profiles are saved, your Monthly Survey checklist will be ready to go. Return any time to update a profile when you notice changes — a new amenity, a fee increase, a renovation. Think of it as a living record, not a once-a-year task.
       </div>
     </div>
   </div>
@@ -3084,6 +3098,7 @@ showScreen('landing');
       </div>
     </div>
   </div>
+  </div>
 
   <!-- Annual Profile Steps -->
   <div class="form-section">
@@ -3094,8 +3109,21 @@ showScreen('landing');
     <div class="section-body">
       <div style="display:flex;flex-direction:column;gap:16px">
 
+        <div style="background:#FFF8E1;border:1.5px solid #F5C842;border-radius:10px;padding:16px 18px;margin-bottom:8px">
+          <div style="font-weight:700;font-size:14px;color:#6D4C00;margin-bottom:6px">⚠️ Important: You Must Complete Profiles for BOTH Your Subject Property AND Your Competitors</div>
+          <div style="font-size:13px;color:#92600e;line-height:1.7">The Annual Profile form has a <strong>Subject / Competitor toggle</strong> at the top. You need to fill out one profile with <strong>"Subject"</strong> selected (for your Berger property) and then separate profiles with <strong>"Competitor"</strong> selected for each comp in your market. The subject profile captures your property's amenities, fees, and utilities so the dashboard can compare you side-by-side against competitors.</div>
+        </div>
+
         <div style="display:flex;gap:14px;align-items:flex-start">
           <div style="min-width:30px;height:30px;background:var(--berger-red);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">1</div>
+          <div>
+            <div style="font-weight:600;font-size:14px;color:var(--navy);margin-bottom:4px">Choose Subject or Competitor</div>
+            <div style="font-size:13px;color:var(--gray-600);line-height:1.7">At the top of the form, select whether you are profiling your <strong>subject property</strong> (your Berger property) or a <strong>competitor</strong>. When Subject is selected, the property name and address auto-fill. Fill out all the same fields — amenities, fees, utilities — so the dashboard can compare apples to apples.</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:14px;align-items:flex-start">
+          <div style="min-width:30px;height:30px;background:var(--berger-red);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">2</div>
           <div>
             <div style="font-weight:600;font-size:14px;color:var(--navy);margin-bottom:4px">Select your property</div>
             <div style="font-size:13px;color:var(--gray-600);line-height:1.7">Choose your Berger property from the dropdown. Your property address and submarket will fill in automatically.</div>
@@ -3103,9 +3131,9 @@ showScreen('landing');
         </div>
 
         <div style="display:flex;gap:14px;align-items:flex-start">
-          <div style="min-width:30px;height:30px;background:var(--berger-red);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">2</div>
+          <div style="min-width:30px;height:30px;background:var(--berger-red);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">7</div>
           <div>
-            <div style="font-weight:600;font-size:14px;color:var(--navy);margin-bottom:4px">Enter the property's property details</div>
+            <div style="font-weight:600;font-size:14px;color:var(--navy);margin-bottom:4px">Enter the property details</div>
             <div style="font-size:13px;color:var(--gray-600);line-height:1.7">Fill in the property's name, address, total units, year built, quality tier, product type, and management company. Enter the distance from your property in miles. The more complete this is, the more useful your monthly surveys will be.</div>
           </div>
         </div>
@@ -3376,7 +3404,7 @@ showScreen('landing');
     </div>
   </div>
 
-  <div id="dash-content"></div>
+  <div id="dash-content"><div style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">📊</div><div style="font-size:16px;font-weight:600;color:#1C2B3A;margin-bottom:8px">Select a Property to View Dashboard</div><div style="font-size:13px;color:#6B7C8D;max-width:420px;margin:0 auto;line-height:1.6">Choose a property from the dropdown above to see its competitive matrix, rent trends, occupancy comparison, and concessions summary.</div></div></div>
   <div id="dash-loading" style="display:none;text-align:center;padding:60px 20px"><div style="font-size:36px;margin-bottom:16px">⏳</div><div style="font-size:14px;color:var(--gray-500)">Loading live data from SharePoint...</div></div>
 </div>
 
@@ -3608,6 +3636,7 @@ function buildDashData(propName, monthlyRows, annualRows) {
 }
 
 async function renderDashboard() {
+  console.log('renderDashboard called, tab:', dashActiveTab);
   const divSel = document.getElementById('dash-division');
   const regSel = document.getElementById('dash-regional');
   const propSel = document.getElementById('dash-property');
@@ -3882,6 +3911,7 @@ function initExportForm() {
 // ── Update renderAdminView to use live data ──────────────────────────────────
 const _origRenderAdmin = renderAdminView;
 renderAdminView = async function() {
+  console.log('renderAdminView (live) called');
   try { _origRenderAdmin(); } catch(e) { console.warn('Original admin render:', e); }
   try { initExportForm(); } catch(e) { console.warn('Export form init:', e); }
 
