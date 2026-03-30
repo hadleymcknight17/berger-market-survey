@@ -1724,7 +1724,7 @@ async function callReadFlow(action, property) {
   const body = { action };
   if (property) body.property = property;
   try {
-    const resp = await fetch('/.netlify/functions/read-data', {
+    const resp = await fetch('/.netlify/functions/read', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -2133,8 +2133,8 @@ function showScreen(name) {
   const pf = document.getElementById('progressFill');
   if (pf) pf.style.width = '0%';
   if (name==='instructions') { document.getElementById('screen-instructions').style.display='block'; window.scrollTo(0,0); return; }
-  if (name==='dashboard') { document.getElementById('screen-dashboard').style.display='block'; renderDashboard(); window.scrollTo(0,0); return; }
-  if (name==='admin') { document.getElementById('screen-admin').style.display='block'; renderAdminView(); window.scrollTo(0,0); return; }
+  if (name==='dashboard') { document.getElementById('screen-dashboard').style.display='block'; renderDashboard().catch(err => console.error('Dashboard error:', err)); window.scrollTo(0,0); return; }
+  if (name==='admin') { document.getElementById('screen-admin').style.display='block'; renderAdminView().catch(err => console.error('Admin error:', err)); window.scrollTo(0,0); return; }
   if (name==='landing') {
     document.getElementById('screen-landing').style.display = 'flex';
     renderLandingTags();
@@ -3336,7 +3336,7 @@ showScreen('landing');
     </div>
     <div class="field-group" style="min-width:260px;flex:1">
       <label>Property</label>
-      <select id="dash-property" onchange="renderDashboard()">
+      <select id="dash-property" onchange="renderDashboard().catch(e=>console.error(e))">
         <option value="">Select a property…</option>
       </select>
     </div>
@@ -3358,20 +3358,20 @@ showScreen('landing');
   </div>
 
   <!-- Rent Display Toggles -->
-  <div id="dash-rent-toggles" style="display:none;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+  <div id="dash-rent-toggles" style="display:none;margin-bottom:16px;gap:10px;flex-wrap:wrap;align-items:center">
     <span style="font-size:12px;font-weight:600;color:var(--gray-500)">Rent Display:</span>
     <div class="pill-group" style="margin:0">
-      <input type="radio" name="dash-rent-mode" id="dash-rent-primary" value="primary" checked onchange="renderDashboard()">
+      <input type="radio" name="dash-rent-mode" id="dash-rent-primary" value="primary" checked onchange="renderDashboard().catch(e=>console.error(e))">
       <label for="dash-rent-primary" style="font-size:12px;padding:5px 12px">Primary Only</label>
-      <input type="radio" name="dash-rent-mode" id="dash-rent-average" value="average" onchange="renderDashboard()">
+      <input type="radio" name="dash-rent-mode" id="dash-rent-average" value="average" onchange="renderDashboard().catch(e=>console.error(e))">
       <label for="dash-rent-average" style="font-size:12px;padding:5px 12px">Average All</label>
     </div>
     <div class="pill-group" style="margin:0">
-      <input type="radio" name="dash-unit-filter" id="dash-unit-all" value="all" checked onchange="renderDashboard()">
+      <input type="radio" name="dash-unit-filter" id="dash-unit-all" value="all" checked onchange="renderDashboard().catch(e=>console.error(e))">
       <label for="dash-unit-all" style="font-size:12px;padding:5px 12px">All</label>
-      <input type="radio" name="dash-unit-filter" id="dash-unit-classic" value="Classic" onchange="renderDashboard()">
+      <input type="radio" name="dash-unit-filter" id="dash-unit-classic" value="Classic" onchange="renderDashboard().catch(e=>console.error(e))">
       <label for="dash-unit-classic" style="font-size:12px;padding:5px 12px">Classic</label>
-      <input type="radio" name="dash-unit-filter" id="dash-unit-reno" value="Renovation" onchange="renderDashboard()">
+      <input type="radio" name="dash-unit-filter" id="dash-unit-reno" value="Renovation" onchange="renderDashboard().catch(e=>console.error(e))">
       <label for="dash-unit-reno" style="font-size:12px;padding:5px 12px">Renovation</label>
     </div>
   </div>
@@ -3629,6 +3629,7 @@ async function renderDashboard() {
   const toggles = document.getElementById('dash-rent-toggles');
   if (toggles) toggles.style.display = (dashActiveTab === 'matrix' || dashActiveTab === 'rent') ? 'flex' : 'none';
 
+  if (!container) { console.error('dash-content container not found'); return; }
   if (!propName) {
     container.innerHTML = '<div style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">📊</div><div style="font-size:16px;font-weight:600;color:var(--navy);margin-bottom:8px">Select a Property to View Dashboard</div><div style="font-size:13px;color:var(--gray-500);max-width:420px;margin:0 auto;line-height:1.6">Choose a property from the dropdown above to see its competitive matrix, rent trends, occupancy comparison, and concessions summary.</div></div>';
     return;
@@ -3636,13 +3637,24 @@ async function renderDashboard() {
 
   // Load live data if not cached
   if (!liveDataLoaded) {
-    container.innerHTML = '';
-    if (loading) loading.style.display = 'block';
-    await loadLiveData();
-    if (loading) loading.style.display = 'none';
+    container.innerHTML = '<div style="text-align:center;padding:40px"><div style="font-size:36px;margin-bottom:12px">⏳</div><div style="font-size:14px;color:var(--gray-500)">Loading live data from SharePoint...</div></div>';
+    try {
+      await loadLiveData();
+    } catch(err) {
+      console.error('Live data load failed:', err);
+      container.innerHTML = '<div style="text-align:center;padding:40px"><div style="font-size:36px;margin-bottom:12px">⚠️</div><div style="font-size:14px;color:var(--gray-500)">Could not load live data. Please check your connection and refresh.</div></div>';
+      return;
+    }
   }
 
-  const data = buildDashData(propName, liveMonthlyData || [], liveAnnualData || []);
+  let data;
+  try {
+    data = buildDashData(propName, liveMonthlyData || [], liveAnnualData || []);
+  } catch(err) {
+    console.error('buildDashData error:', err);
+    container.innerHTML = '<div style="text-align:center;padding:40px"><div style="font-size:36px;margin-bottom:12px">⚠️</div><div style="font-size:14px;color:var(--gray-500)">Error processing data: ' + err.message + '</div></div>';
+    return;
+  }
   if (!data || (data.comps.length === 0 && !data.subject)) {
     container.innerHTML = '<div style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">📋</div><div style="font-size:16px;font-weight:600;color:var(--navy);margin-bottom:8px">No Data Yet for ' + propName + '</div><div style="font-size:13px;color:var(--gray-500);max-width:420px;margin:0 auto;line-height:1.6">Submit Annual Profiles and Monthly Surveys for this property to see data here.</div></div>';
     return;
@@ -3659,7 +3671,7 @@ async function renderDashboard() {
       compChecks.dataset.prop = propName;
       compChecks.innerHTML = data.comps.map((c, i) =>
         '<label style="font-size:12px;display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:16px;background:var(--blue-pale);border:1px solid var(--berger-blue-light);cursor:pointer;white-space:nowrap">' +
-        '<input type="checkbox" checked data-comp="'+c.name+'" onchange="renderDashboard()" style="margin:0"> '+c.name+'</label>'
+        '<input type="checkbox" checked data-comp="'+c.name+'" onchange="renderDashboard().catch(e=>console.error(e))" style="margin:0"> '+c.name+'</label>'
       ).join('');
     }
   }
@@ -3870,11 +3882,13 @@ function initExportForm() {
 // ── Update renderAdminView to use live data ──────────────────────────────────
 const _origRenderAdmin = renderAdminView;
 renderAdminView = async function() {
-  _origRenderAdmin(); // run original for static stuff
-  initExportForm();
+  try { _origRenderAdmin(); } catch(e) { console.warn('Original admin render:', e); }
+  try { initExportForm(); } catch(e) { console.warn('Export form init:', e); }
 
   // Load live data for tracker + comps
+  try {
   if (!liveDataLoaded) await loadLiveData();
+  } catch(e) { console.warn('Live data load failed:', e); }
 
   // Live submission tracker
   const tracker = document.getElementById('admin-tracker');
