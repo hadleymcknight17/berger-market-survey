@@ -2175,6 +2175,57 @@ function initAnnualForm() {
   const preview = document.getElementById('photo-preview-annual');
   if (preview) preview.innerHTML = '';
   annualPhotos = [];
+
+  // Clear all text inputs, number inputs, textareas in the annual form
+  document.querySelectorAll('#screen-annual input[type="text"], #screen-annual input[type="number"], #screen-annual textarea').forEach(el => {
+    if (el.id === 'ann-your-property') return; // keep property dropdown
+    el.value = '';
+    el.readOnly = false;
+    el.style.background = '';
+    el.style.color = '';
+    el.classList.remove('field-error');
+  });
+
+  // Reset all selects (except property dropdown)
+  document.querySelectorAll('#screen-annual select').forEach(sel => {
+    if (sel.id === 'ann-your-property') return;
+    sel.value = '';
+    sel.disabled = false;
+    sel.style.background = '';
+  });
+
+  // Uncheck all amenity checkboxes
+  document.querySelectorAll('#amenity-grid input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+
+  // Reset revenue management radio
+  document.querySelectorAll('input[name="ann-rev-mgmt"]').forEach(r => r.checked = false);
+
+  // Reset Subject/Competitor toggle to Competitor mode
+  if (typeof annualEntryType !== 'undefined') {
+    annualEntryType = 'competitor';
+    const subjBtn = document.getElementById('ann-type-subject');
+    const compBtn = document.getElementById('ann-type-competitor');
+    if (subjBtn) { subjBtn.style.border = '2px solid var(--border)'; subjBtn.style.background = '#fff'; subjBtn.style.color = 'var(--gray-500)'; }
+    if (compBtn) { compBtn.style.border = '2px solid var(--berger-blue)'; compBtn.style.background = 'var(--blue-pale)'; compBtn.style.color = 'var(--berger-blue-dark)'; }
+  }
+
+  // Show sections that may have been hidden in subject mode
+  const impressionGroup = document.getElementById('ann-impression-group');
+  const sectionD = document.getElementById('ann-section-d');
+  const distRow = document.getElementById('ann-distance')?.closest('.field-group');
+  if (impressionGroup) impressionGroup.style.display = '';
+  if (sectionD) sectionD.style.display = '';
+  if (distRow) distRow.parentElement.style.display = '';
+
+  // Hide import bar and subject warning
+  const importBar = document.getElementById('ann-import-bar');
+  if (importBar) importBar.style.display = 'none';
+  const warning = document.getElementById('ann-subject-warning');
+  if (warning) warning.style.display = 'none';
+
+  // Hide validation banner
+  const banner = document.getElementById('annual-validation-banner');
+  if (banner) banner.classList.remove('show');
 }
 function addUnitRow() {
   unitRowCount++;
@@ -2318,10 +2369,13 @@ function handlePropertySelect() {
       box.style.display = 'block';
       tags.innerHTML = '';
       if (comps.length > 0) {
-        comps.forEach((c,i) => {
+        const filteredComps = comps.filter(c => c.toLowerCase() !== propName.toLowerCase());
+        filteredComps.forEach((c,i) => {
+          const isBerger = BERGER_PROPERTIES.some(p => p.name.toLowerCase() === c.toLowerCase());
+          const meta = isBerger ? 'Berger property' : 'from annual profile';
           tags.innerHTML += `<div class="comp-check-item">
             <input type="checkbox" id="compcheck_${i}" value="${c}" checked>
-            <label for="compcheck_${i}"><span class="check-icon"></span><span class="check-name">${c}</span><span class="check-meta">from annual profile</span></label>
+            <label for="compcheck_${i}"><span class="check-icon"></span><span class="check-name">${c}</span><span class="check-meta">${meta}</span></label>
           </div>`;
         });
       } else {
@@ -2373,6 +2427,15 @@ function applyCompSelection() {
   container.innerHTML = '';
   selected.forEach((name,i) => container.appendChild(buildMonthlyCompBlock(i+1, name, prop)));
 
+  // Berger-vs-Berger: detect and lock comp blocks for Berger properties
+  selected.forEach((name, i) => {
+    const num = i + 1;
+    const isBergerComp = BERGER_PROPERTIES.some(p => p.name.toLowerCase() === name.toLowerCase());
+    if (isBergerComp) {
+      lockBergerCompBlock(num, name, prop);
+    }
+  });
+
   const submit = document.getElementById('mon-submit');
   if (submit) submit.style.display = 'block';
 
@@ -2385,6 +2448,100 @@ function applyCompSelection() {
   }, 150);
 
   updateProgress();
+}
+
+// ── Berger-vs-Berger: auto-fill and lock comp block ────────────────────────
+async function lockBergerCompBlock(num, compName, subjectProp) {
+  const block = document.getElementById('mon-comp-'+num);
+  if (!block) return;
+
+  const preview = document.getElementById('mon-comp-preview-'+num);
+  if (preview) {
+    preview.innerHTML = compName + ' <span style="font-size:10px;background:#00ABE5;color:#fff;padding:2px 8px;border-radius:10px;margin-left:6px">Berger Property</span>';
+  }
+
+  if (liveMonthlyData) {
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+
+    const ownData = liveMonthlyData.filter(r => {
+      if (r.Property !== compName) return false;
+      const serial = parseFloat(r.Month);
+      let d;
+      if (!isNaN(serial) && serial > 40000 && serial < 60000) {
+        d = new Date((serial - 25569) * 86400 * 1000);
+      } else {
+        d = new Date(r.Month || r.Timestamp);
+      }
+      return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+    }).sort((a,b) => new Date(b.Timestamp||0) - new Date(a.Timestamp||0));
+
+    if (ownData.length > 0) {
+      const first = ownData[0];
+      const occField = block.querySelector('input[placeholder="e.g. 94%"]');
+      if (occField && first.SubjectOccupancy) {
+        const occ = parseFloat(first.SubjectOccupancy);
+        occField.value = (occ <= 1 && occ > 0 ? (occ * 100).toFixed(0) : occ) + '%';
+      }
+      const concField = document.getElementById('mon-comp-conc-'+num);
+      if (concField && first.SubjectConcessions) concField.value = first.SubjectConcessions;
+      const bergerProp = PROPERTY_MAP[compName];
+      const unitsField = document.getElementById('mon-comp-units-'+num);
+      if (unitsField && bergerProp) unitsField.value = bergerProp.units;
+
+      const subjRows = ownData.filter(r => r.UnitLabel || r.Beds);
+      if (subjRows.length > 0) {
+        const tbody = document.getElementById('comp-tbody-'+num);
+        if (tbody) {
+          tbody.innerHTML = '';
+          compRowCounts[num] = 0;
+          subjRows.forEach(r => {
+            compRowCounts[num] = (compRowCounts[num] || 0) + 1;
+            const rowId = 'comp_' + num + '_' + compRowCounts[num];
+            const temp = document.createElement('tbody');
+            temp.innerHTML = buildRentRowHTML(rowId);
+            const tr = temp.querySelector('tr');
+            if (!tr) return;
+            tbody.appendChild(tr);
+            const row = document.getElementById('row_' + rowId);
+            if (!row) return;
+            const inputs = row.querySelectorAll('input[type=text], input[type=number], select');
+            if (inputs[0] && r.UnitLabel) inputs[0].value = r.UnitLabel;
+            if (inputs[1] && r.Beds) inputs[1].value = r.Beds;
+            if (inputs[2] && r.Baths) inputs[2].value = r.Baths;
+            if (inputs[3] && r.UnitType) inputs[3].value = r.UnitType;
+            if (inputs[4] && r.SqFt) inputs[4].value = r.SqFt;
+            const rent = r.MinRent || r.MaxRent;
+            if (inputs[5] && rent) inputs[5].value = '$' + Math.round(parseFloat(rent)).toLocaleString();
+            if (r.IsPrimary === 'Yes') {
+              row.classList.add('primary-row');
+              const cb = document.getElementById('pri_' + rowId);
+              if (cb) cb.checked = true;
+            }
+          });
+        }
+      }
+    }
+  }
+
+  setTimeout(() => {
+    block.querySelectorAll('input, select, textarea').forEach(el => {
+      if (el.type === 'radio' || el.type === 'checkbox') return;
+      el.readOnly = true;
+      el.disabled = el.tagName === 'SELECT';
+      el.style.background = '#F0F4F7';
+      el.style.color = '#6B7C8D';
+    });
+    block.querySelectorAll('.remove-row-btn, button[onclick*="addCompRow"]').forEach(b => b.style.display = 'none');
+    const body = document.getElementById('mon-body-'+num);
+    if (body) {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'padding:10px 14px;background:#E6F5FC;border:1.5px solid #BADCED;border-radius:8px;margin-bottom:12px;font-size:12px;color:#4C7889';
+      banner.innerHTML = '<strong>Berger Property</strong> \u2014 Data auto-filled from ' + compName + "\'s own monthly submission. Fields are locked.";
+      body.insertBefore(banner, body.firstChild);
+    }
+  }, 200);
 }
 
 // ── Interaction handlers ──────────────────────────────────────────────────────
@@ -3531,6 +3688,20 @@ showScreen('landing');
     <div id="dash-comp-checks" style="display:flex;flex-wrap:wrap;gap:6px"></div>
   </div>
 
+  <!-- Custom Comp Selector -->
+  <div id="dash-custom-comp-area" style="display:none;margin-bottom:16px">
+    <div style="font-size:12px;font-weight:600;color:var(--gray-500);margin-bottom:6px">Add Comps from Other Properties:</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="position:relative;flex:1;max-width:400px">
+        <input type="text" id="dash-custom-search" placeholder="Search all comps across portfolio..."
+          oninput="filterCustomCompDropdown()" onfocus="showCustomCompDropdown()"
+          style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;font-family:DM Sans,sans-serif;box-sizing:border-box">
+        <div id="dash-custom-list" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;background:#fff;border:1.5px solid var(--border);border-top:none;border-radius:0 0 8px 8px;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.1)"></div>
+      </div>
+    </div>
+    <div id="dash-custom-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+  </div>
+
   <!-- Rent Display Toggles -->
   <div id="dash-rent-toggles" style="display:none;margin-bottom:16px;gap:10px;flex-wrap:wrap;align-items:center">
     <span style="font-size:12px;font-weight:600;color:var(--gray-500)">Rent Display:</span>
@@ -3835,6 +4006,10 @@ async function renderDashboard() {
     return;
   }
 
+  // Show custom comp area when a property is selected
+  const customArea = document.getElementById('dash-custom-comp-area');
+  if (customArea) customArea.style.display = propName ? 'block' : 'none';
+
   // Populate comp toggles
   const compToggles = document.getElementById('dash-comp-toggles');
   const compChecks = document.getElementById('dash-comp-checks');
@@ -3856,6 +4031,28 @@ async function renderDashboard() {
     const cb = compChecks?.querySelector('input[data-comp="'+c.name+'"]');
     return !cb || cb.checked;
   });
+
+  // Merge in custom comps from other properties
+  if (dashCustomComps && dashCustomComps.length > 0) {
+    dashCustomComps.forEach(customName => {
+      if (activeComps.some(c => c.name === customName)) return; // already present
+      // Build comp data from all monthly/annual data for this comp across portfolio
+      const customMonthly = (liveMonthlyData||[]).filter(r => r.CompName === customName);
+      const customAnnual = (liveAnnualData||[]).find(r => r.CompName === customName && r.IsSubject !== 'true');
+      if (customMonthly.length > 0 || customAnnual) {
+        const latestMonth = customMonthly.sort((a,b) => new Date(b.Timestamp||0)-new Date(a.Timestamp||0));
+        const latest = latestMonth[0] || {};
+        activeComps.push({
+          name: customName,
+          occupancy: latest.CompOccupancy || '',
+          concessions: latest.CompConcessions || '',
+          rents: latestMonth,
+          isCustom: true
+        });
+      }
+    });
+  }
+
   const filteredData = { ...data, comps: activeComps };
 
   if (dashActiveTab === 'matrix') renderMatrix(container, filteredData);
@@ -4434,6 +4631,99 @@ async function generateExcelExport() {
 
   btn.textContent = '📊 Export to Excel'; btn.disabled = false;
   if (status) { status.style.background = 'var(--green-pale)'; status.style.color = 'var(--green)'; status.textContent = '✅ Excel file downloaded: ' + fileName; }
+}
+</script>
+
+<script>
+// ── Dashboard Custom Comp Functions ──────────────────────────────────────────
+let dashCustomComps = []; // session-only
+
+function getAllPortfolioComps() {
+  if (!liveAnnualData) return [];
+  const all = {};
+  liveAnnualData.forEach(r => {
+    if (r.CompName && r.IsSubject !== 'true') {
+      if (!all[r.CompName]) all[r.CompName] = [];
+      if (!all[r.CompName].includes(r.Property)) all[r.CompName].push(r.Property);
+    }
+  });
+  return Object.entries(all).map(([name, props]) => ({ name, props }));
+}
+
+function showCustomCompDropdown() {
+  const list = document.getElementById('dash-custom-list');
+  if (list) { list.style.display = 'block'; filterCustomCompDropdown(); }
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', closeCustomDropdown, { once: true });
+  }, 100);
+}
+
+function closeCustomDropdown(e) {
+  const area = document.getElementById('dash-custom-comp-area');
+  if (area && !area.contains(e?.target)) {
+    const list = document.getElementById('dash-custom-list');
+    if (list) list.style.display = 'none';
+  }
+}
+
+function filterCustomCompDropdown() {
+  const input = document.getElementById('dash-custom-search');
+  const list = document.getElementById('dash-custom-list');
+  if (!input || !list) return;
+
+  const query = input.value.toLowerCase();
+  const propName = document.getElementById('dash-property')?.value || '';
+  const allComps = getAllPortfolioComps();
+
+  // Filter: exclude comps already in the property's own list and already added custom comps
+  const currentCompNames = [];
+  document.querySelectorAll('#dash-comp-checks input[data-comp]').forEach(cb => currentCompNames.push(cb.dataset.comp));
+  dashCustomComps.forEach(c => currentCompNames.push(c));
+
+  const filtered = allComps.filter(c =>
+    !currentCompNames.includes(c.name) &&
+    (query === '' || c.name.toLowerCase().includes(query))
+  ).slice(0, 20);
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:var(--gray-400)">No matching comps found</div>';
+  } else {
+    list.innerHTML = filtered.map(c =>
+      '<div onclick="addCustomDashComp(\''+c.name.replace(/'/g, "\\'")+'\')" style="padding:8px 12px;font-size:12.5px;cursor:pointer;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center" onmouseover="this.style.background=\'var(--blue-pale)\'" onmouseout="this.style.background=\'#fff\'">' +
+      '<span style="font-weight:600;color:var(--navy)">' + c.name + '</span>' +
+      '<span style="font-size:10px;color:var(--gray-400)">surveyed by ' + c.props.join(', ') + '</span></div>'
+    ).join('');
+  }
+  list.style.display = 'block';
+}
+
+function addCustomDashComp(name) {
+  if (dashCustomComps.includes(name)) return;
+  dashCustomComps.push(name);
+
+  const tags = document.getElementById('dash-custom-tags');
+  if (tags) {
+    const tag = document.createElement('span');
+    tag.style.cssText = 'font-size:12px;display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:16px;background:#FFF8E1;border:1px solid #F5C842;color:#6D4C00;white-space:nowrap';
+    tag.innerHTML = name + ' <span onclick="removeCustomDashComp(\''+name.replace(/'/g, "\\'")+'\')" style="cursor:pointer;font-size:14px;color:#C99400;margin-left:4px">&times;</span>';
+    tag.dataset.comp = name;
+    tags.appendChild(tag);
+  }
+
+  document.getElementById('dash-custom-search').value = '';
+  document.getElementById('dash-custom-list').style.display = 'none';
+  renderDashboard().catch(e => console.error(e));
+}
+
+function removeCustomDashComp(name) {
+  dashCustomComps = dashCustomComps.filter(c => c !== name);
+  const tags = document.getElementById('dash-custom-tags');
+  if (tags) {
+    const tag = tags.querySelector('[data-comp="'+name+'"]');
+    if (tag) tag.remove();
+  }
+  renderDashboard().catch(e => console.error(e));
 }
 </script>
 
