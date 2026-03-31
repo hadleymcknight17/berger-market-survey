@@ -329,12 +329,6 @@ setTimeout(() => { const el = document.getElementById("gate-password"); if (el &
       <div class="card-freq">Monthly · Recurring</div>
       <div class="card-title">Monthly Survey</div>
       <div class="card-desc">Capture current pricing, concessions, and availability for all tracked properties.</div>
-      <ul class="card-features">
-        <li>Rent ranges by unit type</li>
-        <li>Active concessions &amp; values</li>
-        <li>Primary product head-to-head</li>
-        <li>Comp list pre-populated from profiles</li>
-      </ul>
       <button class="card-cta" onclick="showScreen('monthly')">Start Monthly Survey →</button>
     </div>
     <div class="mode-card annual">
@@ -342,12 +336,6 @@ setTimeout(() => { const el = document.getElementById("gate-password"); if (el &
       <div class="card-freq">Annual · Update anytime</div>
       <div class="card-title">Annual Comp Profile</div>
       <div class="card-desc">Build and maintain your database. Update any time details change — not just once a year.</div>
-      <ul class="card-features">
-        <li>Full unit mix &amp; pricing</li>
-        <li>Amenities &amp; property details</li>
-        <li>Photo gallery &amp; observations</li>
-        <li>Feeds comp list for monthly surveys</li>
-      </ul>
       <button class="card-cta" onclick="showScreen('annual')">Start Annual Profile →</button>
     </div>
     <div class="mode-card" style="border-color:#E8F4FD;cursor:default" onclick="showScreen('instructions')">
@@ -355,12 +343,6 @@ setTimeout(() => { const el = document.getElementById("gate-password"); if (el &
       <div class="card-freq">Reference · Always available</div>
       <div class="card-title">Instructions</div>
       <div class="card-desc">Step-by-step guide for completing both the Annual Profile and Monthly Survey.</div>
-      <ul class="card-features">
-        <li>How to set up a property</li>
-        <li>How to complete a monthly survey</li>
-        <li>Tips for accurate data collection</li>
-        <li>FAQ &amp; troubleshooting</li>
-      </ul>
       <button class="card-cta" style="background:var(--teal);color:#fff" onclick="showScreen('instructions')">View Instructions →</button>
     </div>
     <div class="mode-card" style="border-color:#E0F2FE;cursor:default" onclick="showScreen('dashboard')">
@@ -368,12 +350,6 @@ setTimeout(() => { const el = document.getElementById("gate-password"); if (el &
       <div class="card-freq">Analytics · Live Data</div>
       <div class="card-title">Market Dashboard</div>
       <div class="card-desc">Competitive intelligence at a glance — rent trends, occupancy, and concessions.</div>
-      <ul class="card-features">
-        <li>Comp matrix overview</li>
-        <li>Month-over-month rent trends</li>
-        <li>Occupancy comparison charts</li>
-        <li>Concessions summary</li>
-      </ul>
       <button class="card-cta" style="background:var(--berger-blue);color:#fff" onclick="showScreen('dashboard')">View Dashboard →</button>
     </div>
     <div class="mode-card" style="border-color:#E0F2FE;cursor:default" onclick="showScreen('exports')">
@@ -388,18 +364,8 @@ setTimeout(() => { const el = document.getElementById("gate-password"); if (el &
       <div class="card-freq">Admin · PIN protected</div>
       <div class="card-title">Admin View</div>
       <div class="card-desc">Track submission status across all properties and view recent survey activity.</div>
-      <ul class="card-features">
-        <li>Submission log by property</li>
-        <li>Monthly completion tracker</li>
-        <li>Quick data overview</li>
-        <li>PIN protected access</li>
-      </ul>
       <button class="card-cta" style="background:var(--navy);color:#fff" onclick="promptAdmin()">Enter Admin →</button>
     </div>
-  </div>
-  <div class="comp-cloud">
-    <div class="comp-cloud-label">Registered properties</div>
-    <div id="landing-comp-tags" style="display:flex;flex-wrap:wrap;gap:7px;justify-content:center"></div>
   </div>
 </div>
 
@@ -1805,18 +1771,24 @@ let liveDataLoaded = false;
 async function loadLiveData() {
   if (liveDataLoaded) return;
   try {
-    const [monthly, annual] = await Promise.all([
-      callReadFlow('getAllMonthly'),
-      callReadFlow('getAllAnnual')
-    ]);
-    liveMonthlyData = Array.isArray(monthly) ? monthly : [];
-    liveAnnualData = Array.isArray(annual) ? annual : [];
+    // If annual data was already loaded at startup, only fetch monthly
+    if (liveAnnualData && liveAnnualData.length > 0) {
+      const monthly = await callReadFlow('getAllMonthly');
+      liveMonthlyData = Array.isArray(monthly) ? monthly : [];
+    } else {
+      const [monthly, annual] = await Promise.all([
+        callReadFlow('getAllMonthly'),
+        callReadFlow('getAllAnnual')
+      ]);
+      liveMonthlyData = Array.isArray(monthly) ? monthly : [];
+      liveAnnualData = Array.isArray(annual) ? annual : [];
+    }
     liveDataLoaded = true;
     console.log('Live data loaded:', liveMonthlyData.length, 'monthly rows,', liveAnnualData.length, 'annual rows');
   } catch (err) {
     console.error('Failed to load live data:', err);
-    liveMonthlyData = [];
-    liveAnnualData = [];
+    if (!liveMonthlyData) liveMonthlyData = [];
+    if (!liveAnnualData) liveAnnualData = [];
   }
 }
 
@@ -2111,7 +2083,7 @@ function buildMonthlyCompBlock(num, preloadedName, prop) {
         <div class="field-row">
           <div class="field-group">
             <label>Product Type</label>
-            <select><option value="">— Select —</option><option>Garden Style</option><option>High Rise</option><option>Mid Rise</option><option>Townhome</option></select>
+            <select id="mon-comp-prod-${num}"><option value="">— Select —</option><option>Garden Style</option><option>High Rise</option><option>Mid Rise</option><option>Townhome</option></select>
           </div>
           <div class="field-group"></div>
         </div>
@@ -2436,6 +2408,24 @@ function applyCompSelection() {
     }
   });
 
+  // Pre-populate tier, units, product type from annual profile data
+  setTimeout(() => {
+    if (!liveAnnualData || liveAnnualData.length === 0) return;
+    selected.forEach((name, i) => {
+      const num = i + 1;
+      const profile = liveAnnualData
+        .filter(r => r.CompName && r.CompName.toLowerCase() === name.toLowerCase() && r.IsSubject !== 'true')
+        .sort((a,b) => new Date(b.TimeStamp||0) - new Date(a.TimeStamp||0))[0];
+      if (!profile) return;
+      const tierField = document.getElementById('mon-comp-tier-'+num);
+      const unitsField = document.getElementById('mon-comp-units-'+num);
+      const prodField = document.getElementById('mon-comp-prod-'+num);
+      if (tierField && profile.QualityTier && !tierField.value) tierField.value = profile.QualityTier;
+      if (unitsField && profile.TotalUnits && !unitsField.value) unitsField.value = profile.TotalUnits;
+      if (prodField && profile.ProductType && !prodField.value) prodField.value = profile.ProductType;
+    });
+  }, 150);
+
   const submit = document.getElementById('mon-submit');
   if (submit) submit.style.display = 'block';
 
@@ -2730,7 +2720,7 @@ function collectMonthlyData() {
     const compUnits = document.getElementById('mon-comp-units-'+num)?.value||'';
     const compNotes = document.getElementById('mon-comp-notes-'+num)?.value||'';
     const sources   = Array.from(block.querySelectorAll('input[type=checkbox]:checked')).map(cb=>cb.nextElementSibling?.textContent?.trim()).filter(Boolean).join(', ');
-    const compProd  = Array.from(block.querySelectorAll('select')).find(s=>s.innerHTML.includes('Garden Style'))?.value||'';
+    const compProd  = document.getElementById('mon-comp-prod-'+num)?.value||'';
     const compRows  = [];
     block.querySelectorAll('tbody tr').forEach(row => {
       const inputs = row.querySelectorAll('input, select');
@@ -3215,23 +3205,40 @@ function updateProgress() {
 document.addEventListener('input', updateProgress);
 document.addEventListener('change', updateProgress);
 
-// Load registered comps from SharePoint on startup
+// Load registered comps from SharePoint on startup (with retry)
 (async function initLiveComps() {
-  try {
-    const annualData = await callReadFlow('getAllAnnual');
-    if (Array.isArray(annualData)) {
-      annualData.forEach(r => {
-        if (r.Property && r.CompName) {
-          if (!registeredComps[r.Property]) registeredComps[r.Property] = [];
-          if (!registeredComps[r.Property].includes(r.CompName)) {
-            registeredComps[r.Property].push(r.CompName);
-          }
-        }
-      });
-      console.log('Loaded registered comps from SharePoint');
-      renderLandingTags();
+  let annualData = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      annualData = await callReadFlow('getAllAnnual');
+      if (Array.isArray(annualData) && annualData.length > 0) break;
+      if (attempt < 3) {
+        console.warn('getAllAnnual attempt ' + attempt + ' returned empty, retrying...');
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
+    } catch (err) {
+      console.warn('getAllAnnual attempt ' + attempt + ' failed:', err);
+      if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt));
     }
-  } catch (err) { console.warn('Could not load comps:', err); }
+  }
+
+  if (Array.isArray(annualData) && annualData.length > 0) {
+    let compCount = 0;
+    annualData.forEach(r => {
+      if (r.Property && r.CompName) {
+        if (!registeredComps[r.Property]) registeredComps[r.Property] = [];
+        if (!registeredComps[r.Property].includes(r.CompName)) {
+          registeredComps[r.Property].push(r.CompName);
+          compCount++;
+        }
+      }
+    });
+    console.log('Loaded ' + compCount + ' registered comps across ' + Object.keys(registeredComps).filter(k => registeredComps[k].length > 0).length + ' properties');
+    // Also store for dashboard/import use
+    liveAnnualData = annualData;
+  } else {
+    console.warn('Could not load annual data from SharePoint after 3 attempts. Comp checklists may be empty.');
+  }
 })();
 
 showScreen('landing');
@@ -3262,7 +3269,7 @@ showScreen('landing');
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div style="background:var(--blue-pale);border:1.5px solid var(--berger-blue-light);border-radius:10px;padding:18px">
           <div style="font-weight:700;color:var(--berger-blue);margin-bottom:8px;font-size:14px">📊 Monthly Survey</div>
-          <p style="font-size:13px;color:var(--gray-600);line-height:1.7;margin:0">This is what you fill out every month. It captures current pricing, occupancy, and concessions for your property and each of your properties.</p>
+          <p style="font-size:13px;color:var(--gray-600);line-height:1.7;margin:0">This is what you fill out every month. It captures Best Price, CoStar Occupancy, and concessions for your subject property and each competitor.</p>
         </div>
         <div style="background:#FFF5F5;border:1.5px solid #F5C5C5;border-radius:10px;padding:18px">
           <div style="font-weight:700;color:var(--berger-red);margin-bottom:8px;font-size:14px">🗂️ Annual Comp Profile</div>
@@ -3304,7 +3311,7 @@ showScreen('landing');
           <div style="min-width:30px;height:30px;background:var(--berger-blue);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">3</div>
           <div>
             <div style="font-weight:600;font-size:14px;color:var(--navy);margin-bottom:4px">Fill in your subject property first</div>
-            <div style="font-size:13px;color:var(--gray-600);line-height:1.7">Enter your property's current occupancy and any active concessions. Then add a row for each unit type — include the unit label, beds, baths, Classic or Renovation, and the <strong>best price</strong> (lowest price offered). Use the <strong>★ star</strong> to mark your primary unit type. Note the lease term in your notes.</div>
+            <div style="font-size:13px;color:var(--gray-600);line-height:1.7">Enter your property's current CoStar Occupancy and any active concessions. Then add a row for each unit type — include the unit label, beds, baths, Classic or Renovation, and the <strong>best price</strong> (lowest price offered). Use the <strong>★ star</strong> to mark your primary unit type. Note the lease term in your notes.</div>
           </div>
         </div>
 
@@ -3312,7 +3319,7 @@ showScreen('landing');
           <div style="min-width:30px;height:30px;background:var(--berger-blue);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">4</div>
           <div>
             <div style="font-weight:600;font-size:14px;color:var(--navy);margin-bottom:4px">Complete each comp block</div>
-            <div style="font-size:13px;color:var(--gray-600);line-height:1.7">Work through each property one at a time. Enter their occupancy, concessions, and unit type pricing. Select where you got the data from (Phone, CoStar, Website, or Other). If a property won't share pricing, click <strong>Yes — could not collect</strong> and note the reason.</div>
+            <div style="font-size:13px;color:var(--gray-600);line-height:1.7">Work through each property one at a time. Enter their CoStar Occupancy, concessions, and Best Price per unit type. Select where you got the data from (Phone, CoStar, Website, or Other). If a property won't share pricing, click <strong>Yes — could not collect</strong> and note the reason.</div>
           </div>
         </div>
 
@@ -3442,7 +3449,6 @@ showScreen('landing');
         </div>
 
 
-
         <div style="background:var(--gray-50);border-radius:8px;padding:14px">
           <div style="font-weight:600;font-size:13px;color:var(--navy);margin-bottom:5px">⭐ Use the star to mark your primary unit</div>
           <div style="font-size:12.5px;color:var(--gray-600);line-height:1.6">The star marks the unit type that best competes head-to-head with your subject property. This is used for direct comparisons in reporting.</div>
@@ -3488,7 +3494,7 @@ showScreen('landing');
 
         <div style="border-left:3px solid var(--berger-blue-light);padding-left:16px">
           <div style="font-weight:600;font-size:13.5px;color:var(--navy);margin-bottom:5px">A property has closed down or I no longer track them</div>
-          <div style="font-size:13px;color:var(--gray-600);line-height:1.7">Open their Annual Comp Profile, check the No Longer Tracking box at the top, and submit. They will be removed from your monthly checklist going forward.</div>
+          <div style="font-size:13px;color:var(--gray-600);line-height:1.7">Simply uncheck that property on your monthly survey checklist. If you need to remove it permanently, contact Hadley McKnight.</div>
         </div>
 
         <div style="border-left:3px solid var(--berger-blue-light);padding-left:16px">
