@@ -1193,7 +1193,7 @@ setTimeout(() => { const el = document.getElementById("gate-password"); if (el &
         </div>
       </div>
       <div class="section-body">
-        <div class="info-box blue"><span>ℹ️</span><span>Enter your subject property's current data. <strong>Best Price</strong> = the lowest price currently offered. Toggle ★ to mark your primary unit type for direct comparison.</span></div>
+        <div class="info-box blue"><span>ℹ️</span><span>Enter your subject property's current data. <strong>Best Price</strong> = the lowest price currently offered. Select one <strong>primary ★ unit type per floorplan</strong> (Studio, 1 Bed, 2 Bed, 3 Bed) for dashboard comparison.</span></div>
         <div class="field-row">
           <div class="field-group">
             <label>CoStar Occupancy % <span class="req">*</span></label>
@@ -1205,7 +1205,7 @@ setTimeout(() => { const el = document.getElementById("gate-password"); if (el &
           </div>
         </div>
         <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:4px">Unit Type Pricing</div>
-        <div class="info-box blue" style="margin-bottom:10px"><span>★</span><span>Enter the <strong>best price</strong> (lowest price offered) for each unit type. Mark one <strong>primary unit type per floorplan</strong> (e.g., one for Studio, one for 1BR, one for 2BR). Note the lease term the best price is based on in your notes below.</span></div>
+        <div class="info-box blue" style="margin-bottom:10px"><span>★</span><span>Enter the <strong>best price</strong> (lowest price offered) for each unit type. Select one <strong>★ primary per floorplan</strong>: one for Studio, one for 1 Bed, one for 2 Bed, one for 3 Bed. Note the lease term in your notes below.</span></div>
         <table class="rent-grid">
           <thead><tr>
             <th class="left" style="min-width:220px">Unit Type / Beds / Baths</th>
@@ -1764,7 +1764,7 @@ async function callReadFlow(action, property) {
 }
 
 // ── Cached live data ─────────────────────────────────────────────────────────
-function isSubjectEntry(r) { return r && (r.IsSubject === true || isSubjectEntry(r) || isSubjectEntry(r) || String(r.IsSubject).toLowerCase() === 'true'); }
+function isSubjectEntry(r) { if (!r) return false; var v = r.IsSubject; return v === true || v === 'true' || v === 'True'; }
 let liveMonthlyData = null;
 let liveAnnualData = null;
 let liveDataLoaded = false;
@@ -1875,7 +1875,7 @@ async function checkExistingSubject(propName) {
   try {
     const annualData = await callReadFlow('getAnnualProfiles', propName);
     const existing = (Array.isArray(annualData) ? annualData : []).find(r =>
-      isSubjectEntry(r) || r.IsSubject === true || r.CompName === propName
+      isSubjectEntry(r) || r.CompName === propName
     );
     if (existing && warning) {
       warning.style.display = 'block';
@@ -2063,28 +2063,14 @@ function buildMonthlyCompBlock(num, preloadedName, prop) {
               oninput="updateMonCompPreview(${num})"
               style="${isPreloaded ? 'border-color:#BADCED;background:var(--blue-pale)' : ''}">
           </div>
-          <div class="field-group">
-            <label>Quality Tier</label>
-            <select id="mon-comp-tier-${num}"><option value="">— Select —</option>
-              <option>A</option>
-              <option>B</option>
-              <option>C</option><option>D</option></select>
-          </div>
+          <input type="hidden" id="mon-comp-tier-${num}" value="">
+          <input type="hidden" id="mon-comp-units-${num}" value="">
+          <input type="hidden" id="mon-comp-prod-${num}" value="">
         </div>
         <div class="field-row">
           <div class="field-group">
             <label>CoStar Occupancy % <span class="req">*</span></label>
             <div class="input-wrap"><input type="text" placeholder="e.g. 94%" oninput="formatPercent(this)" onfocus="onPercentFocus(this)"></div>
-          </div>
-          <div class="field-group">
-            <label>Total Unit Count</label>
-            <input type="number" id="mon-comp-units-${num}" min="0" placeholder="e.g. 240">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field-group">
-            <label>Product Type</label>
-            <select id="mon-comp-prod-${num}"><option value="">— Select —</option><option>Garden Style</option><option>High Rise</option><option>Mid Rise</option><option>Townhome</option></select>
           </div>
           <div class="field-group"></div>
         </div>
@@ -2111,7 +2097,7 @@ function buildMonthlyCompBlock(num, preloadedName, prop) {
         </div>
         <div class="field-divider"></div>
         <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:6px">Unit Type Pricing</div>
-        <div class="info-box blue" style="margin-bottom:10px"><span>★</span><span>Enter the <strong>best price</strong> (lowest price offered) per unit type. Toggle ★ to mark the <strong>primary unit type</strong> for direct comparison — highlighted in gold. Note the lease term in the notes below.</span></div>
+        <div class="info-box blue" style="margin-bottom:10px"><span>★</span><span>Enter the <strong>best price</strong> (lowest price offered) per unit type. Select one <strong>primary ★ per floorplan</strong> (Studio, 1 Bed, 2 Bed, 3 Bed) for dashboard comparison — highlighted in gold. Note the lease term in the notes below.</span></div>
         <table class="rent-grid">
           <thead><tr>
             <th class="left" style="min-width:220px">Unit Type / Beds / Baths</th>
@@ -3045,10 +3031,53 @@ function loadDraft(form) {
 function loadLastMonth() {
   const prop = document.getElementById('mon-property')?.value;
   if (!prop) { showToast('Please select your property first.', 'gray'); return; }
-  const raw = localStorage.getItem('bc_last_month_' + prop);
-  if (!raw) { showToast('No previous submission found for this property. Submit a survey first to enable this feature.', 'gray'); return; }
-  const data = JSON.parse(raw);
-  if ((!data.savedRows || data.savedRows.length === 0) && !data.compSaved) { showToast('No unit types found in last submission.', 'gray'); return; }
+
+  // Try localStorage first
+  let raw = localStorage.getItem('bc_last_month_' + prop);
+  let data = null;
+  if (raw) {
+    try { data = JSON.parse(raw); } catch(e) { data = null; }
+  }
+
+  // If not in localStorage, build from live SharePoint data
+  if ((!data || (!data.savedRows?.length && !data.compSaved)) && liveMonthlyData && liveMonthlyData.length > 0) {
+    const propRows = liveMonthlyData.filter(r => r.Property === prop).sort((a,b) => new Date(b.Timestamp||0) - new Date(a.Timestamp||0));
+    if (propRows.length > 0) {
+      // Get the most recent month
+      const latestTimestamp = propRows[0].Timestamp;
+      const latestRows = propRows.filter(r => r.Timestamp === latestTimestamp);
+
+      // Build subject rows
+      const subjRows = latestRows.filter(r => r.CompName === 'Subject Property' || r.CompName === prop);
+      const savedRows = subjRows.filter(r => r.UnitLabel || r.Beds).map(r => ({
+        label: r.UnitLabel || '', beds: String(r.Beds || ''), baths: String(r.Baths || ''),
+        unitType: r.UnitType || '', sqFt: String(r.SqFt || ''),
+        primary: r.IsPrimary === 'Yes'
+      }));
+
+      // Build comp rows grouped by comp name
+      const compSaved = {};
+      const compNames = [...new Set(latestRows.filter(r => r.CompName && r.CompName !== 'Subject Property' && r.CompName !== prop).map(r => r.CompName))];
+      compNames.forEach(cn => {
+        const cRows = latestRows.filter(r => r.CompName === cn && (r.UnitLabel || r.Beds));
+        if (cRows.length > 0) {
+          compSaved[cn] = cRows.map(r => ({
+            label: r.UnitLabel || '', beds: String(r.Beds || ''), baths: String(r.Baths || ''),
+            unitType: r.UnitType || '', sqFt: String(r.SqFt || ''),
+            primary: r.IsPrimary === 'Yes'
+          }));
+        }
+      });
+
+      data = { prop, savedRows, compSaved, month: 'SharePoint' };
+      console.log('Loaded last month from SharePoint:', savedRows.length, 'subject rows,', Object.keys(compSaved).length, 'comps');
+    }
+  }
+
+  if (!data || ((!data.savedRows || data.savedRows.length === 0) && !data.compSaved)) {
+    showToast('No previous submission found for this property.', 'gray');
+    return;
+  }
 
   function restoreRowsToTbody(tbody, savedRows, prefix) {
     if (!tbody || !savedRows || savedRows.length === 0) return;
@@ -4445,7 +4474,7 @@ renderAdminView = async function() {
         '<div style="margin-bottom:8px"><div style="font-weight:600;font-size:13px;color:var(--navy);margin-bottom:6px">' + prop + ' <span style="color:var(--gray-400);font-weight:400">(' + byProp[prop].length + ' comps)</span></div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
         byProp[prop].map(c => {
-          const isSubject = liveAnnualData.some(r => r.Property === prop && r.CompName === c && (isSubjectEntry(r) || r.IsSubject === true));
+          const isSubject = liveAnnualData.some(r => r.Property === prop && r.CompName === c && isSubjectEntry(r));
           return '<span style="font-size:11.5px;padding:3px 10px;border-radius:20px;' +
             (isSubject ? 'background:#FFF8E1;border:1px solid #F5C842;color:#6D4C00' : 'background:var(--blue-pale);border:1px solid var(--berger-blue-light);color:var(--berger-blue-dark)') +
             '">' + c + (isSubject ? ' ★' : '') + '</span>';
