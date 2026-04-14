@@ -866,7 +866,7 @@ setTimeout(() => { const el = document.getElementById("gate-password"); if (el &
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Refundable Security Deposit</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Refundable_Security_Deposit" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="e.g. $500, First Month's Rent" id="am_Refundable_Security_Deposit">
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Non-Refundable Security Deposit</span>
@@ -924,7 +924,7 @@ setTimeout(() => { const el = document.getElementById("gate-password"); if (el &
           <div class="amenity-text-grid">
           <div class="amenity-text-item">
             <span class="amenity-text-label">Flat Rate Fee</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Flat_Rate_Fee" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="e.g. $125/mo flat rate" id="am_Flat_Rate_Fee">
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Water</span>
@@ -1764,6 +1764,7 @@ async function callReadFlow(action, property) {
 }
 
 // ── Cached live data ─────────────────────────────────────────────────────────
+function isSubjectEntry(r) { return r && (r.IsSubject === true || isSubjectEntry(r) || isSubjectEntry(r) || String(r.IsSubject).toLowerCase() === 'true'); }
 let liveMonthlyData = null;
 let liveAnnualData = null;
 let liveDataLoaded = false;
@@ -1874,7 +1875,7 @@ async function checkExistingSubject(propName) {
   try {
     const annualData = await callReadFlow('getAnnualProfiles', propName);
     const existing = (Array.isArray(annualData) ? annualData : []).find(r =>
-      r.IsSubject === 'true' || r.IsSubject === true || r.CompName === propName
+      isSubjectEntry(r) || r.IsSubject === true || r.CompName === propName
     );
     if (existing && warning) {
       warning.style.display = 'block';
@@ -2195,6 +2196,22 @@ function initAnnualForm() {
   const warning = document.getElementById('ann-subject-warning');
   if (warning) warning.style.display = 'none';
 
+  // Reset property dropdown
+  const propDropdown = document.getElementById('ann-your-property');
+  if (propDropdown) propDropdown.value = '';
+
+  // Clear property badge
+  const badge = document.getElementById('ann-property-badge');
+  if (badge) badge.remove();
+
+  // Clear subject address
+  const subjAddr = document.getElementById('ann-subject-address');
+  if (subjAddr) subjAddr.value = '';
+
+  // Clear submarket
+  const submarket = document.getElementById('ann-submarket');
+  if (submarket) submarket.value = '';
+
   // Hide validation banner
   const banner = document.getElementById('annual-validation-banner');
   if (banner) banner.classList.remove('show');
@@ -2293,7 +2310,7 @@ function handleAnnualPropertySelect() {
   updateProgress();
   if (!prop) return;
   const sub = document.getElementById('ann-submarket');
-  if (sub && !sub.value) sub.value = prop.cityState;
+  if (sub) sub.value = prop.cityState;
   const subjAddrField = document.getElementById('ann-subject-address');
   if (subjAddrField) subjAddrField.value = prop ? (prop.address + ', ' + prop.cityState) : '';
   // If subject entry type is active, auto-populate comp fields
@@ -2414,7 +2431,7 @@ function applyCompSelection() {
     selected.forEach((name, i) => {
       const num = i + 1;
       const profile = liveAnnualData
-        .filter(r => r.CompName && r.CompName.toLowerCase() === name.toLowerCase() && r.IsSubject !== 'true')
+        .filter(r => r.CompName && r.CompName.toLowerCase() === name.toLowerCase() && !isSubjectEntry(r))
         .sort((a,b) => new Date(b.TimeStamp||0) - new Date(a.TimeStamp||0))[0];
       if (!profile) return;
       const tierField = document.getElementById('mon-comp-tier-'+num);
@@ -2603,7 +2620,7 @@ function submitAnnual() {
     cabinetStyle:      gv('am_Upgraded_Cabinets'),
     appFee:            cleanVal(gv('am_App_Fee')),
     administrativeFee: cleanVal(gv('am_Administrative_Fee')),
-    refundableSecurityDeposit: cleanVal(gv('am_Refundable_Security_Deposit')),
+    refundableSecurityDeposit: gv('am_Refundable_Security_Deposit'),
     nonRefundableSecurityDeposit: cleanVal(gv('am_Non_Refundable_Security_Deposit')),
     petDeposit:        cleanVal(gv('am_Pet_Deposit')),
     nonRefPetFee1:     cleanVal(gv('am_Non_Ref_Pet_Fee___1_Pet')),
@@ -2615,7 +2632,7 @@ function submitAnnual() {
     rentableCarports:  gv('am_Rentable_Carports'),
     rentableStorage:   gv('am_Rentable_Storage'),
     reservedParkingSpot: gv('am_Reserved_Parking_Spot'),
-    flatRateFee:       cleanVal(gv('am_Flat_Rate_Fee')),
+    flatRateFee:       gv('am_Flat_Rate_Fee'),
     utilWater:         gv('am_Water'),
     utilSewer:         gv('am_Sewer'),
     utilGas:           gv('am_Gas'),
@@ -2927,6 +2944,13 @@ function saveDraft(form) {
     if (subjSec) data['__subj_visible__'] = subjSec.style.display !== 'none';
   }
   data['__saved_at__'] = new Date().toLocaleString();
+  // Save extra state
+  if (form === 'monthly') {
+    data['__compRowCounts__'] = Object.assign({}, compRowCounts);
+  }
+  if (form === 'annual') {
+    data['__annualEntryType__'] = annualEntryType || 'competitor';
+  }
   localStorage.setItem('bc_draft_' + form, JSON.stringify(data));
   const status = document.getElementById(form + '-draft-status');
   if (status) status.textContent = 'Draft saved at ' + data['__saved_at__'];
@@ -2936,7 +2960,8 @@ function saveDraft(form) {
 function loadDraft(form) {
   const raw = localStorage.getItem('bc_draft_' + form);
   if (!raw) { showToast('No saved draft found for this form.', 'gray'); return; }
-  const data = JSON.parse(raw);
+  let data;
+  try { data = JSON.parse(raw); } catch(e) { showToast('Draft data is corrupted. Please start fresh.', 'gray'); return; }
   const screen = document.getElementById('screen-' + form);
 
   // Restore dynamic HTML first
@@ -2951,6 +2976,23 @@ function loadDraft(form) {
     }
     const subjSec = document.getElementById('subject-section');
     if (subjSec && (data['__comp_area__'] || data['__subj_visible__'])) subjSec.style.display = 'block';
+    // Show submit button
+    const submitBtn = document.getElementById('mon-submit');
+    if (submitBtn && data['__comp_area__']) submitBtn.style.display = 'block';
+    // Show comp checklist box
+    const preBox = document.getElementById('preloaded-comps-box');
+    if (preBox && data['mon-property']) preBox.style.display = 'block';
+    // Restore compRowCounts from saved data
+    if (data['__compRowCounts__']) {
+      try { Object.assign(compRowCounts, data['__compRowCounts__']); } catch(e) {}
+    }
+  }
+
+  if (form === 'annual') {
+    // Restore subject/competitor mode
+    if (data['__annualEntryType__']) {
+      annualEntryType = data['__annualEntryType__'];
+    }
   }
 
   // Restore field values
@@ -2969,9 +3011,34 @@ function loadDraft(form) {
     if (radio) radio.checked = true;
   });
 
+  // For annual: restore UI state after values are set
+  if (form === 'annual') {
+    if (data['__annualEntryType__']) {
+      setAnnualEntryType(data['__annualEntryType__']);
+    }
+    // Trigger property badge display
+    const propVal = document.getElementById('ann-your-property')?.value;
+    if (propVal) handleAnnualPropertySelect();
+  }
+
+  // For monthly: trigger property badge and restore num comps display
+  if (form === 'monthly') {
+    const propVal = document.getElementById('mon-property')?.value;
+    if (propVal) {
+      const propData = PROPERTY_MAP[propVal];
+      const subjHdr = document.getElementById('subject-prop-header-name');
+      if (subjHdr) subjHdr.textContent = propVal;
+      let badge = document.getElementById('mon-property-badge');
+      if (propData && badge) {
+        badge.style.display = 'flex';
+        badge.innerHTML = '<span>\ud83d\udccd <strong>' + propData.cityState + '</strong></span><span>\ud83c\udfe2 ' + propData.division + '</span><span>\ud83d\udc64 ' + propData.regional + '</span><span>\ud83c\udfe0 ' + propData.units + ' units</span>';
+      }
+    }
+  }
+
   const status = document.getElementById(form + '-draft-status');
   if (status) status.textContent = 'Draft loaded (saved ' + (data['__saved_at__'] || 'unknown') + ')';
-  showToast('Draft loaded!', 'blue');
+  showToast('Draft loaded from ' + (data['__saved_at__'] || 'earlier') + '!', 'blue');
 }
 
 // ── Load Last Month ──────────────────────────────────────────────────────────
@@ -3693,6 +3760,20 @@ showScreen('landing');
     <div id="dash-comp-checks" style="display:flex;flex-wrap:wrap;gap:6px"></div>
   </div>
 
+  <!-- Add Subject Properties Selector -->
+  <div id="dash-subject-comp-area" style="display:none;margin-bottom:16px">
+    <div style="font-size:12px;font-weight:600;color:var(--gray-500);margin-bottom:6px">Add Other Berger Properties to Compare:</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="position:relative;flex:1;max-width:400px">
+        <input type="text" id="dash-subject-search" placeholder="Search Berger properties..."
+          oninput="filterSubjectDropdown()" onfocus="showSubjectDropdown()"
+          style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;font-family:DM Sans,sans-serif;box-sizing:border-box">
+        <div id="dash-subject-list" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;background:#fff;border:1.5px solid var(--border);border-top:none;border-radius:0 0 8px 8px;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.1)"></div>
+      </div>
+    </div>
+    <div id="dash-subject-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+  </div>
+
   <!-- Custom Comp Selector -->
   <div id="dash-custom-comp-area" style="display:none;margin-bottom:16px">
     <div style="font-size:12px;font-weight:600;color:var(--gray-500);margin-bottom:6px">Add Comps from Other Properties:</div>
@@ -3850,8 +3931,8 @@ function buildDashData(propName, monthlyRows, annualRows) {
   const rentMode = getRentMode();
 
   // Get comp names from annual profiles for this property
-  const propAnnual = annualRows.filter(r => r.Property === propName && r.IsSubject !== 'true');
-  const subjectAnnual = annualRows.find(r => r.Property === propName && (r.IsSubject === 'true' || r.CompName === propName));
+  const propAnnual = annualRows.filter(r => r.Property === propName && !isSubjectEntry(r));
+  const subjectAnnual = annualRows.find(r => r.Property === propName && (isSubjectEntry(r) || r.CompName === propName));
   const propData = PROPERTY_MAP[propName] || {};
 
   // Build subject info
@@ -3899,7 +3980,7 @@ function buildDashData(propName, monthlyRows, annualRows) {
   };
 
   // Build comp data
-  const compNames = [...new Set(propAnnual.map(r => r.CompName))];
+  const compNames = [...new Set(propAnnual.map(r => r.CompName))].filter(cn => cn.toLowerCase() !== propName.toLowerCase());
   const comps = compNames.map(cn => {
     const annRow = propAnnual.find(r => r.CompName === cn);
     const compMonthly = latestMonthly.filter(r => r.CompName === cn);
@@ -4011,9 +4092,11 @@ async function renderDashboard() {
     return;
   }
 
-  // Show custom comp area when a property is selected
+  // Show custom comp and subject areas when a property is selected
   const customArea = document.getElementById('dash-custom-comp-area');
   if (customArea) customArea.style.display = propName ? 'block' : 'none';
+  const subjectArea = document.getElementById('dash-subject-comp-area');
+  if (subjectArea) subjectArea.style.display = propName ? 'block' : 'none';
 
   // Populate comp toggles
   const compToggles = document.getElementById('dash-comp-toggles');
@@ -4037,13 +4120,50 @@ async function renderDashboard() {
     return !cb || cb.checked;
   });
 
+  // Merge in custom subject properties (as additional subjects for comparison)
+  if (typeof dashCustomSubjects !== 'undefined' && dashCustomSubjects.length > 0) {
+    dashCustomSubjects.forEach(subjName => {
+      if (activeComps.some(c => c.name === subjName)) return;
+      // Build this Berger property's data as a comp entry
+      const subjPropData = PROPERTY_MAP[subjName] || {};
+      const subjAnnual = (liveAnnualData||[]).find(r => r.Property === subjName && (isSubjectEntry(r) || r.CompName === subjName));
+      const subjMonthly = (liveMonthlyData||[]).filter(r => r.Property === subjName).sort((a,b) => new Date(b.Timestamp||0)-new Date(a.Timestamp||0));
+      const occ = subjMonthly.length > 0 ? subjMonthly[0].SubjectOccupancy : '';
+      const conc = subjMonthly.length > 0 ? (subjMonthly[0].SubjectConcessions || '') : '';
+      const subjRows = subjMonthly.filter(r => r.CompName === 'Subject Property' || r.CompName === subjName);
+      const pricing = {};
+      ['Studio','1','2','3','4'].forEach(b => {
+        const label = {'Studio':'Studio','1':'1 Bedroom','2':'2 Bedroom','3':'3 Bedroom','4':'4 Bedroom'}[b];
+        let filtered = subjRows.filter(r => String(r.Beds) === b);
+        if (filtered.length > 0) {
+          const row = filtered.find(r => r.IsPrimary === 'Yes') || filtered[0];
+          const rent = parseFloat(String(row.MaxRent||row.MinRent||'').replace(/[$,]/g,''));
+          pricing[label] = !isNaN(rent) ? fmtRent(rent) : null;
+        }
+      });
+      activeComps.push({
+        name: subjName + ' (Subject)',
+        units: subjPropData.units || subjAnnual?.TotalUnits || '',
+        yearBuilt: subjAnnual?.YearBuilt || '',
+        distance: '',
+        schoolDistrict: subjAnnual?.SchoolDistrict || '',
+        occupancy: fmtOcc(occ),
+        renovation: subjAnnual?.YearRenovated ? 'Yes' : '',
+        amenities: subjAnnual?.Amenities || '',
+        pricing: pricing,
+        concessions: conc,
+        isSubjectComp: true
+      });
+    });
+  }
+
   // Merge in custom comps from other properties
   if (dashCustomComps && dashCustomComps.length > 0) {
     dashCustomComps.forEach(customName => {
       if (activeComps.some(c => c.name === customName)) return; // already present
       // Build comp data from all monthly/annual data for this comp across portfolio
       const customMonthly = (liveMonthlyData||[]).filter(r => r.CompName === customName);
-      const customAnnual = (liveAnnualData||[]).find(r => r.CompName === customName && r.IsSubject !== 'true');
+      const customAnnual = (liveAnnualData||[]).find(r => r.CompName === customName && !isSubjectEntry(r));
       if (customMonthly.length > 0 || customAnnual) {
         const latestMonth = customMonthly.sort((a,b) => new Date(b.Timestamp||0)-new Date(a.Timestamp||0));
         const latest = latestMonth[0] || {};
@@ -4179,8 +4299,8 @@ function renderAmenities(el, data) {
   }
   const propName = document.getElementById('dash-property')?.value;
   const annualRows = (liveAnnualData||[]).filter(r => r.Property === propName);
-  const subjectRow = annualRows.find(r => r.IsSubject === 'true' || r.CompName === propName);
-  const compRows = annualRows.filter(r => r.IsSubject !== 'true' && r.CompName !== propName);
+  const subjectRow = annualRows.find(r => isSubjectEntry(r) || r.CompName === propName);
+  const compRows = annualRows.filter(r => !isSubjectEntry(r) && r.CompName !== propName);
   const activeNames = data.comps.map(c => c.name);
   const filteredComps = compRows.filter(r => activeNames.includes(r.CompName));
   const allRows = subjectRow ? [subjectRow, ...filteredComps] : filteredComps;
@@ -4210,7 +4330,7 @@ function renderAmenities(el, data) {
   });
   h += '</tbody></table></div></div>';
   // Utilities comparison
-  const utilFields = [['Water','UtilWater'],['Sewer','UtilSewer'],['Gas','UtilGas'],['Trash','UtilTrash'],['Valet Trash','UtilValetTrash'],['Cable','UtilCable'],['Internet','UtilInternet'],['Electric','UtilElectric']];
+  const utilFields = [['Flat Rate Fee','FlatRateFee'],['Water','UtilWater'],['Sewer','UtilSewer'],['Gas','UtilGas'],['Trash','UtilTrash'],['Valet Trash','UtilValetTrash'],['Cable','UtilCable'],['Internet','UtilInternet'],['Electric','UtilElectric']];
   h += '<div class="dash-chart-card"><div class="dash-chart-title">Utilities</div><div style="overflow-x:auto"><table class="matrix-table"><thead><tr><th style="text-align:left">Utility</th>';
   allRows.forEach((r,i) => { h += '<th class="'+(r===subjectRow?'matrix-subject-h':'')+'">'+(r.CompName||'—')+'</th>'; });
   h += '</tr></thead><tbody>';
@@ -4325,7 +4445,7 @@ renderAdminView = async function() {
         '<div style="margin-bottom:8px"><div style="font-weight:600;font-size:13px;color:var(--navy);margin-bottom:6px">' + prop + ' <span style="color:var(--gray-400);font-weight:400">(' + byProp[prop].length + ' comps)</span></div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
         byProp[prop].map(c => {
-          const isSubject = liveAnnualData.some(r => r.Property === prop && r.CompName === c && (r.IsSubject === 'true' || r.IsSubject === true));
+          const isSubject = liveAnnualData.some(r => r.Property === prop && r.CompName === c && (isSubjectEntry(r) || r.IsSubject === true));
           return '<span style="font-size:11.5px;padding:3px 10px;border-radius:20px;' +
             (isSubject ? 'background:#FFF8E1;border:1px solid #F5C842;color:#6D4C00' : 'background:var(--blue-pale);border:1px solid var(--berger-blue-light);color:var(--berger-blue-dark)') +
             '">' + c + (isSubject ? ' ★' : '') + '</span>';
@@ -4481,8 +4601,8 @@ async function generatePDFReport() {
     // Amenities comparison
     if (document.getElementById('exp-amenities')?.checked !== false) {
       const annualRows = (liveAnnualData||[]).filter(r => r.Property === prop);
-      const subjectRow = annualRows.find(r => r.IsSubject === 'true' || r.CompName === prop);
-      const compAnnual = annualRows.filter(r => r.IsSubject !== 'true' && r.CompName !== prop);
+      const subjectRow = annualRows.find(r => isSubjectEntry(r) || r.CompName === prop);
+      const compAnnual = annualRows.filter(r => !isSubjectEntry(r) && r.CompName !== prop);
       const allAnnual = subjectRow ? [subjectRow, ...compAnnual] : compAnnual;
       if (allAnnual.length > 0) {
         // Amenity checklist
@@ -4511,7 +4631,7 @@ async function generatePDFReport() {
         });
         reportHtml += '</tbody></table>';
         // Utilities
-        const utilFields = [['Water','UtilWater'],['Sewer','UtilSewer'],['Gas','UtilGas'],['Trash','UtilTrash'],['Electric','UtilElectric'],['Internet','UtilInternet']];
+        const utilFields = [['Flat Rate Fee','FlatRateFee'],['Water','UtilWater'],['Sewer','UtilSewer'],['Gas','UtilGas'],['Trash','UtilTrash'],['Valet Trash','UtilValetTrash'],['Cable','UtilCable'],['Internet','UtilInternet'],['Electric','UtilElectric']];
         reportHtml += '<h2>Utilities</h2><table><thead><tr><th>Utility</th>';
         allAnnual.forEach(r => { reportHtml += '<th>'+(r.CompName||'')+'</th>'; });
         reportHtml += '</tr></thead><tbody>';
@@ -4621,7 +4741,7 @@ async function generateExcelExport() {
       });
       amenRows.push([]);
       amenRows.push(['UTILITIES']);
-      [['Water','UtilWater'],['Sewer','UtilSewer'],['Gas','UtilGas'],['Trash','UtilTrash'],['Valet Trash','UtilValetTrash'],['Cable','UtilCable'],['Internet','UtilInternet'],['Electric','UtilElectric']].forEach(([l,k]) => {
+      [['Flat Rate Fee','FlatRateFee'],['Water','UtilWater'],['Sewer','UtilSewer'],['Gas','UtilGas'],['Trash','UtilTrash'],['Valet Trash','UtilValetTrash'],['Cable','UtilCable'],['Internet','UtilInternet'],['Electric','UtilElectric']].forEach(([l,k]) => {
         amenRows.push([l, ...annualRows.map(r => r[k]||'')]);
       });
       const amenWs = XLSX.utils.aoa_to_sheet(amenRows);
@@ -4640,6 +4760,78 @@ async function generateExcelExport() {
 </script>
 
 <script>
+// ── Dashboard Subject Property Functions ─────────────────────────────────────
+let dashCustomSubjects = []; // session-only
+
+function showSubjectDropdown() {
+  const list = document.getElementById('dash-subject-list');
+  if (list) { list.style.display = 'block'; filterSubjectDropdown(); }
+  setTimeout(() => {
+    document.addEventListener('click', closeSubjectDropdown, { once: true });
+  }, 100);
+}
+
+function closeSubjectDropdown(e) {
+  const area = document.getElementById('dash-subject-comp-area');
+  if (area && !area.contains(e?.target)) {
+    const list = document.getElementById('dash-subject-list');
+    if (list) list.style.display = 'none';
+  }
+}
+
+function filterSubjectDropdown() {
+  const input = document.getElementById('dash-subject-search');
+  const list = document.getElementById('dash-subject-list');
+  if (!input || !list) return;
+
+  const query = input.value.toLowerCase();
+  const currentProp = document.getElementById('dash-property')?.value || '';
+
+  const filtered = BERGER_PROPERTIES
+    .filter(p => p.name !== currentProp && !dashCustomSubjects.includes(p.name))
+    .filter(p => query === '' || p.name.toLowerCase().includes(query))
+    .slice(0, 15);
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:var(--gray-400)">No matching properties</div>';
+  } else {
+    list.innerHTML = filtered.map(p =>
+      '<div onclick="addCustomSubject(\'' + p.name.replace(/'/g, "\\'") + '\')" style="padding:8px 12px;font-size:12.5px;cursor:pointer;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between" onmouseover="this.style.background=\'var(--blue-pale)\'" onmouseout="this.style.background=\'#fff\'">' +
+      '<span style="font-weight:600;color:var(--navy)">' + p.name + '</span>' +
+      '<span style="font-size:10px;color:var(--gray-400)">' + p.cityState + ' &middot; ' + p.units + ' units</span></div>'
+    ).join('');
+  }
+  list.style.display = 'block';
+}
+
+function addCustomSubject(name) {
+  if (dashCustomSubjects.includes(name)) return;
+  dashCustomSubjects.push(name);
+
+  const tags = document.getElementById('dash-subject-tags');
+  if (tags) {
+    const tag = document.createElement('span');
+    tag.style.cssText = 'font-size:12px;display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:16px;background:#E6F5FC;border:1px solid #BADCED;color:#4C7889;white-space:nowrap';
+    tag.innerHTML = name + ' <span onclick="removeCustomSubject(\'' + name.replace(/'/g, "\\'") + '\')" style="cursor:pointer;font-size:14px;color:#4C7889;margin-left:4px">&times;</span>';
+    tag.dataset.subj = name;
+    tags.appendChild(tag);
+  }
+
+  document.getElementById('dash-subject-search').value = '';
+  document.getElementById('dash-subject-list').style.display = 'none';
+  renderDashboard().catch(e => console.error(e));
+}
+
+function removeCustomSubject(name) {
+  dashCustomSubjects = dashCustomSubjects.filter(c => c !== name);
+  const tags = document.getElementById('dash-subject-tags');
+  if (tags) {
+    const tag = tags.querySelector('[data-subj="' + name + '"]');
+    if (tag) tag.remove();
+  }
+  renderDashboard().catch(e => console.error(e));
+}
+
 // ── Dashboard Custom Comp Functions ──────────────────────────────────────────
 let dashCustomComps = []; // session-only
 
@@ -4647,7 +4839,7 @@ function getAllPortfolioComps() {
   if (!liveAnnualData) return [];
   const all = {};
   liveAnnualData.forEach(r => {
-    if (r.CompName && r.IsSubject !== 'true') {
+    if (r.CompName && !isSubjectEntry(r)) {
       if (!all[r.CompName]) all[r.CompName] = [];
       if (!all[r.CompName].includes(r.Property)) all[r.CompName].push(r.Property);
     }
@@ -4798,7 +4990,7 @@ async function generateExcelFromMain() {
 async function checkExistingProfile(compName) {
   if (!compName || compName.length < 3 || !liveAnnualData) return;
   const existing = liveAnnualData.find(r => 
-    r.CompName && r.CompName.toLowerCase() === compName.toLowerCase() && r.IsSubject !== 'true'
+    r.CompName && r.CompName.toLowerCase() === compName.toLowerCase() && !isSubjectEntry(r)
   );
   if (!existing) return;
   
