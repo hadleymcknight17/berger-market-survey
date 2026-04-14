@@ -4795,17 +4795,6 @@ let dashCustomSubjects = []; // session-only
 function showSubjectDropdown() {
   const list = document.getElementById('dash-subject-list');
   if (list) { list.style.display = 'block'; filterSubjectDropdown(); }
-  setTimeout(() => {
-    document.addEventListener('click', closeSubjectDropdown, { once: true });
-  }, 100);
-}
-
-function closeSubjectDropdown(e) {
-  const area = document.getElementById('dash-subject-comp-area');
-  if (area && !area.contains(e?.target)) {
-    const list = document.getElementById('dash-subject-list');
-    if (list) list.style.display = 'none';
-  }
 }
 
 function filterSubjectDropdown() {
@@ -4861,6 +4850,22 @@ function removeCustomSubject(name) {
   renderDashboard().catch(e => console.error(e));
 }
 
+// ── Global dropdown close handler ─────────────────────────────────────────────
+document.addEventListener('click', function(e) {
+  // Close subject dropdown if clicking outside it
+  const subjArea = document.getElementById('dash-subject-comp-area');
+  const subjList = document.getElementById('dash-subject-list');
+  if (subjList && subjList.style.display !== 'none' && subjArea && !subjArea.contains(e.target)) {
+    subjList.style.display = 'none';
+  }
+  // Close custom comp dropdown if clicking outside it
+  const compArea = document.getElementById('dash-custom-comp-area');
+  const compList = document.getElementById('dash-custom-list');
+  if (compList && compList.style.display !== 'none' && compArea && !compArea.contains(e.target)) {
+    compList.style.display = 'none';
+  }
+});
+
 // ── Dashboard Custom Comp Functions ──────────────────────────────────────────
 let dashCustomComps = []; // session-only
 
@@ -4879,18 +4884,6 @@ function getAllPortfolioComps() {
 function showCustomCompDropdown() {
   const list = document.getElementById('dash-custom-list');
   if (list) { list.style.display = 'block'; filterCustomCompDropdown(); }
-  // Close on outside click
-  setTimeout(() => {
-    document.addEventListener('click', closeCustomDropdown, { once: true });
-  }, 100);
-}
-
-function closeCustomDropdown(e) {
-  const area = document.getElementById('dash-custom-comp-area');
-  if (area && !area.contains(e?.target)) {
-    const list = document.getElementById('dash-custom-list');
-    if (list) list.style.display = 'none';
-  }
 }
 
 function filterCustomCompDropdown() {
