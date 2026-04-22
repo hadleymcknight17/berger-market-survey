@@ -508,6 +508,17 @@ setTimeout(() => { const el = document.getElementById("gate-password"); if (el &
           <label>Subject Property Address <span class="hint">auto-filled</span></label>
           <input type="text" id="ann-subject-address" placeholder="Select your property above" readonly style="background:var(--gray-50);color:var(--gray-500);cursor:default;">
         </div>
+        <!-- Additional subject properties (appears only in Competitor mode, when primary property is selected) -->
+        <div class="field-group" id="ann-additional-subjects-wrap" style="display:none">
+          <label style="display:flex;align-items:center;gap:8px">
+            <span>Also apply this profile to other properties <span class="hint">optional — same competitor, shared across your nearby Berger properties</span></span>
+          </label>
+          <div id="ann-additional-subjects-box" style="background:#F5FBFE;border:1.5px solid #BADCED;border-radius:10px;padding:12px 14px;max-height:180px;overflow-y:auto">
+            <div id="ann-additional-subjects-list" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+            <div id="ann-additional-subjects-empty" style="font-size:12.5px;color:var(--gray-500);font-style:italic;display:none">No other properties under your Regional Manager to link.</div>
+          </div>
+          <div style="font-size:12px;color:var(--gray-600);margin-top:6px">Checking a property will create a linked profile for that subject using the same details below. Distance can be adjusted per-subject on the monthly survey.</div>
+        </div>
         <div class="field-row">
           <div class="field-group">
             <label>Property Name <span class="req">*</span></label>
@@ -858,11 +869,11 @@ setTimeout(() => { const el = document.getElementById("gate-password"); if (el &
           <div class="amenity-text-grid">
           <div class="amenity-text-item">
             <span class="amenity-text-label">App Fee</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_App_Fee" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="$" id="am_App_Fee" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)" onblur="formatCurrency(this)">
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Administrative Fee</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Administrative_Fee" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="$" id="am_Administrative_Fee" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)" onblur="formatCurrency(this)">
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Refundable Security Deposit</span>
@@ -870,31 +881,31 @@ setTimeout(() => { const el = document.getElementById("gate-password"); if (el &
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Non-Refundable Security Deposit</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Non_Refundable_Security_Deposit" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="$" id="am_Non_Refundable_Security_Deposit" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)" onblur="formatCurrency(this)">
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Pet Deposit</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Pet_Deposit" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="$" id="am_Pet_Deposit" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)" onblur="formatCurrency(this)">
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Non-Ref Pet Fee - 1 Pet</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Non_Ref_Pet_Fee___1_Pet" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="$" id="am_Non_Ref_Pet_Fee___1_Pet" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)" onblur="formatCurrency(this)">
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Non-Ref Pet Fee - 2 Pets</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Non_Ref_Pet_Fee___2_Pets" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="$" id="am_Non_Ref_Pet_Fee___2_Pets" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)" onblur="formatCurrency(this)">
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Monthly Pet Rent - 1 Pet</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Monthly_Pet_Rent___1_Pet" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="$" id="am_Monthly_Pet_Rent___1_Pet" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)" onblur="formatCurrency(this)">
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Monthly Pet Rent - 2 Pets</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Monthly_Pet_Rent___2_Pets" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="$" id="am_Monthly_Pet_Rent___2_Pets" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)" onblur="formatCurrency(this)">
           </div>
           <div class="amenity-text-item">
             <span class="amenity-text-label">Amenity Fee</span>
-            <input type="text" class="amenity-text-input" placeholder="$" id="am_Amenity_Fee" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)">
+            <input type="text" class="amenity-text-input" placeholder="$" id="am_Amenity_Fee" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)" onblur="formatCurrency(this)">
           </div>
           </div>
         </div>
@@ -1197,7 +1208,7 @@ setTimeout(() => { const el = document.getElementById("gate-password"); if (el &
         <div class="field-row">
           <div class="field-group">
             <label>CoStar Occupancy % <span class="req">*</span></label>
-            <div class="input-wrap"><input type="text" placeholder="e.g. 96%" id="subj-occupancy" oninput="formatPercent(this)" onfocus="onPercentFocus(this)"></div>
+            <div class="input-wrap"><input type="text" placeholder="e.g. 96%" id="subj-occupancy" onfocus="onPercentFocus(this)" onblur="formatPercent(this)"></div>
           </div>
           <div class="field-group">
             <label>Active Concessions <span class="hint">describe any current specials</span></label>
@@ -1836,6 +1847,9 @@ function setAnnualEntryType(type) {
 
     // Check for existing subject entry
     checkExistingSubject(propName);
+    // Hide additional-subjects checklist in subject mode
+    const addlWrap = document.getElementById('ann-additional-subjects-wrap');
+    if (addlWrap) addlWrap.style.display = 'none';
   } else {
     compBtn.style.border = '2px solid var(--berger-blue)';
     compBtn.style.background = 'var(--blue-pale)';
@@ -1866,6 +1880,8 @@ function setAnnualEntryType(type) {
     // Show impression notes and Section D for competitor
     if (impressionGroup) impressionGroup.style.display = '';
     if (sectionD) sectionD.style.display = '';
+    // Re-render additional-subjects checklist in competitor mode
+    if (typeof renderAdditionalSubjectsList === 'function') renderAdditionalSubjectsList();
   }
 }
 
@@ -1972,7 +1988,7 @@ function buildRentRowHTML(rowId) {
       </div>
     </td>
     <td style="width:80px"><div class="input-wrap"><input type="number" min="0" placeholder="850" title="Square footage" style="width:100%;min-width:65px;padding:5px 8px;box-sizing:border-box"></div></td>
-    <td style="width:120px"><div class="input-wrap" style="min-width:100px"><input type="text" placeholder="$0" style="width:100%;min-width:100px;padding:5px 8px;box-sizing:border-box" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)"></div></td>
+    <td style="width:120px"><div class="input-wrap" style="min-width:100px"><input type="text" placeholder="$0" style="width:100%;min-width:100px;padding:5px 8px;box-sizing:border-box" oninput="formatCurrency(this)" onfocus="onCurrencyFocus(this)" onblur="formatCurrency(this)"></div></td>
     <td><div class="primary-toggle-wrap">
       <input type="checkbox" class="primary-toggle" id="pri_${rowId}" onchange="handleRowPrimary('${rowId}')">
       <label for="pri_${rowId}"></label>
@@ -2070,9 +2086,12 @@ function buildMonthlyCompBlock(num, preloadedName, prop) {
         <div class="field-row">
           <div class="field-group">
             <label>CoStar Occupancy % <span class="req">*</span></label>
-            <div class="input-wrap"><input type="text" placeholder="e.g. 94%" oninput="formatPercent(this)" onfocus="onPercentFocus(this)"></div>
+            <div class="input-wrap"><input type="text" placeholder="e.g. 94%" onfocus="onPercentFocus(this)" onblur="formatPercent(this)"></div>
           </div>
-          <div class="field-group"></div>
+          <div class="field-group">
+            <label>Distance from Subject <span class="req">*</span></label>
+            <input type="text" id="mon-comp-distance-${num}" placeholder="e.g. 2.3 miles">
+          </div>
         </div>
         <div class="field-row">
           <div class="field-group">
@@ -2119,6 +2138,18 @@ function buildMonthlyCompBlock(num, preloadedName, prop) {
   setTimeout(() => {
     compRowCounts[num] = 0;
     addCompRow(num); addCompRow(num);
+    // Pre-fill distance from annual profile (keyed by current subject + comp name)
+    if (isPreloaded && prop && preloadedName && Array.isArray(liveAnnualData)) {
+      const annRow = liveAnnualData.find(r =>
+        r && r.Property === prop &&
+        r.CompName && String(r.CompName).toLowerCase() === String(preloadedName).toLowerCase() &&
+        (typeof isSubjectEntry !== 'function' || !isSubjectEntry(r))
+      );
+      const distField = document.getElementById('mon-comp-distance-' + num);
+      if (distField && annRow && annRow.Distance && annRow.Distance !== '—') {
+        distField.value = annRow.Distance;
+      }
+    }
     // Pre-fill from existing submission if available
     if (isPreloaded && typeof prefillCompFromExisting === 'function') {
       setTimeout(() => prefillCompFromExisting(num, preloadedName), 100);
@@ -2155,6 +2186,9 @@ function initAnnualForm() {
 
   // Uncheck all amenity checkboxes
   document.querySelectorAll('#amenity-grid input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+
+  // Uncheck any additional-subjects pills
+  document.querySelectorAll('.ann-additional-subj').forEach(cb => { cb.checked = false; });
 
   // Reset revenue management radio
   document.querySelectorAll('input[name="ann-rev-mgmt"]').forEach(r => r.checked = false);
@@ -2290,11 +2324,50 @@ function renderLandingTags() {
 }
 
 // ── Annual property select ────────────────────────────────────────────────────
+// ── Additional-subjects checklist (multi-link same comp profile) ─────────────
+function renderAdditionalSubjectsList() {
+  const wrap = document.getElementById('ann-additional-subjects-wrap');
+  const list = document.getElementById('ann-additional-subjects-list');
+  const empty = document.getElementById('ann-additional-subjects-empty');
+  if (!wrap || !list) return;
+  // Hide entirely in Subject mode
+  if (annualEntryType === 'subject') { wrap.style.display = 'none'; return; }
+  const primaryName = document.getElementById('ann-your-property')?.value || '';
+  const primary = PROPERTY_MAP[primaryName];
+  if (!primary) { wrap.style.display = 'none'; return; }
+  // Find peers under the same Regional Manager, excluding the primary itself
+  const peers = BERGER_PROPERTIES.filter(p =>
+    p.regional === primary.regional && p.name !== primary.name
+  ).sort((a,b) => a.name.localeCompare(b.name));
+  list.innerHTML = '';
+  if (peers.length === 0) {
+    wrap.style.display = '';
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  peers.forEach(p => {
+    const id = 'addl-subj-' + p.name.replace(/[^a-zA-Z0-9]/g,'_');
+    const pill = document.createElement('label');
+    pill.setAttribute('for', id);
+    pill.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#fff;border:1.5px solid var(--berger-blue-light);border-radius:20px;font-size:12.5px;color:var(--berger-blue-dark);cursor:pointer;user-select:none';
+    pill.innerHTML = `<input type="checkbox" class="ann-additional-subj" data-prop="${p.name}" id="${id}" style="margin:0;cursor:pointer"><span><strong>${p.name}</strong> <span style="color:var(--gray-500);font-weight:400">· ${p.cityState}</span></span>`;
+    list.appendChild(pill);
+  });
+  wrap.style.display = '';
+}
+
+function getAdditionalSubjects() {
+  return Array.from(document.querySelectorAll('.ann-additional-subj:checked'))
+    .map(cb => cb.getAttribute('data-prop'))
+    .filter(Boolean);
+}
+
 function handleAnnualPropertySelect() {
   const name = document.getElementById('ann-your-property')?.value;
   const prop = PROPERTY_MAP[name];
   updateProgress();
-  if (!prop) return;
+  if (!prop) { renderAdditionalSubjectsList(); return; }
   const sub = document.getElementById('ann-submarket');
   if (sub) sub.value = prop.cityState;
   const subjAddrField = document.getElementById('ann-subject-address');
@@ -2309,6 +2382,7 @@ function handleAnnualPropertySelect() {
     document.getElementById('ann-your-property')?.parentNode?.appendChild(badge);
   }
   badge.innerHTML = `<span>📍 <strong>${prop.cityState}</strong></span><span>🏢 ${prop.division}</span><span>👤 ${prop.regional}</span><span>🏠 ${prop.units} units</span>`;
+  renderAdditionalSubjectsList();
 }
 
 // ── Monthly property select ───────────────────────────────────────────────────
@@ -2635,12 +2709,21 @@ function submitAnnual() {
     otherObservations: document.querySelector('#screen-annual textarea[placeholder*="Anything else"]')?.value||''
   };
 
-  // Register comp in local checklist
-  if (prop && comp && !registeredComps[prop]?.includes(comp)) {
-    if (!registeredComps[prop]) registeredComps[prop]=[];
-    registeredComps[prop].push(comp);
+  // Build list of subjects to link this comp profile to (primary + any additional)
+  const additionalSubjects = (annualEntryType === 'subject' || typeof getAdditionalSubjects !== 'function')
+    ? [] : getAdditionalSubjects();
+  const allSubjects = [prop, ...additionalSubjects.filter(s => s && s !== prop)];
+
+  // Register comp in local checklist for each linked subject (session-level state;
+  // server refetch rebuilds this authoritatively on next load)
+  if (comp) {
+    allSubjects.forEach(subj => {
+      if (!subj) return;
+      if (!registeredComps[subj]) registeredComps[subj] = [];
+      if (!registeredComps[subj].includes(comp)) registeredComps[subj].push(comp);
+    });
+    annualProfiles[comp] = { units: payload.totalUnits, tier: payload.qualityTier };
   }
-  if (comp) { annualProfiles[comp] = { units: payload.totalUnits, tier: payload.qualityTier }; }
 
   // Log submission locally
   const entry = { type:'Annual Profile', prop, month: now.toLocaleString('default',{month:'long',year:'numeric'}),
@@ -2655,25 +2738,46 @@ function submitAnnual() {
   const submitBtn = document.querySelector('#screen-annual .submit-btn');
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
 
-  fetch(ANNUAL_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  }).then(resp => {
-    if (!resp.ok) throw new Error('Server responded ' + resp.status);
-    console.log('Annual profile submitted successfully', resp.status);
+  // POST one payload per subject (same comp data, different property value)
+  const postPromises = allSubjects.map(subjectName => {
+    const perPayload = Object.assign({}, payload, { property: subjectName });
+    return fetch(ANNUAL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(perPayload)
+    }).then(resp => {
+      if (!resp.ok) throw new Error('Server responded ' + resp.status + ' for ' + subjectName);
+      return { subjectName, ok: true };
+    }).catch(err => ({ subjectName, ok: false, error: err.message }));
+  });
+
+  Promise.all(postPromises).then(results => {
+    const succeeded = results.filter(r => r.ok).map(r => r.subjectName);
+    const failed    = results.filter(r => !r.ok);
     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Profile'; }
+    if (succeeded.length === 0) {
+      console.error('All annual POSTs failed:', failed);
+      alert('Submission failed — please check your internet connection and try again.\n\nFirst error: ' + (failed[0]?.error || 'unknown'));
+      return;
+    }
+    if (failed.length > 0) {
+      console.warn(failed.length + ' of ' + results.length + ' annual POSTs failed:', failed);
+    }
     document.getElementById('annual-form-body').style.display='none';
     document.getElementById('annual-success').classList.add('show');
     const ts2 = new Date().toLocaleString();
-    document.getElementById('annual-success-msg').textContent =
-      `${comp} has been added to ${prop||"your property"}'s database at ${ts2}.`;
+    let msg;
+    if (succeeded.length === 1) {
+      msg = `${comp} has been added to ${succeeded[0]||"your property"}'s database at ${ts2}.`;
+    } else {
+      msg = `${comp} has been added to ${succeeded.length} properties (${succeeded.join(', ')}) at ${ts2}.`;
+    }
+    if (failed.length > 0) {
+      msg += ` Note: ${failed.length} linked save(s) failed — please retry for: ${failed.map(f=>f.subjectName).join(', ')}.`;
+    }
+    document.getElementById('annual-success-msg').textContent = msg;
     const pf=document.getElementById('progressFill'); if(pf) pf.style.width='100%';
     window.scrollTo({top:0,behavior:'smooth'});
-  }).catch(err => {
-    console.error('Annual POST failed:', err);
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Annual Profile →'; }
-    alert('Submission failed — please check your internet connection and try again.\n\nError: ' + err.message);
   });
 }
 function resetAnnual() {
@@ -2724,6 +2828,7 @@ function collectMonthlyData() {
     const compNotes = document.getElementById('mon-comp-notes-'+num)?.value||'';
     const sources   = Array.from(block.querySelectorAll('input[type=checkbox]:checked')).map(cb=>cb.nextElementSibling?.textContent?.trim()).filter(Boolean).join(', ');
     const compProd  = document.getElementById('mon-comp-prod-'+num)?.value||'';
+    const compDistance = document.getElementById('mon-comp-distance-'+num)?.value||'';
     const compRows  = [];
     block.querySelectorAll('tbody tr').forEach(row => {
       const inputs = row.querySelectorAll('input, select');
@@ -2734,7 +2839,7 @@ function collectMonthlyData() {
         maxRent: cleanVal(inputs[5]?.value||''), isPrimary: row.classList.contains('primary-row') ? 'Yes' : 'No'
       });
     });
-    comps.push({ compName, compOcc, compConc, compTier, compUnits, compNotes, sources, compProd, compRows });
+    comps.push({ compName, compOcc, compConc, compTier, compUnits, compNotes, sources, compProd, compDistance, compRows });
   });
   return { name, prop, month, subjOcc, subjConc, rows, comps };
 }
@@ -2755,7 +2860,7 @@ function submitMonthly() {
     subjectOccupancy: data.subjOcc, subjectConcessions: data.subjConc,
     compName: 'Subject Property', compOccupancy: data.subjOcc,
     compConcessions: data.subjConc, compQualityTier: '', compProductType: '',
-    compUnitCount: '', compDataSource: '', compNotes: ''
+    compUnitCount: '', compDataSource: '', compNotes: '', compDistance: ''
   };
   if (data.rows.length > 0) {
     data.rows.forEach(r => submissions.push({...baseRow, ...r}));
@@ -2769,7 +2874,7 @@ function submitMonthly() {
       compName: comp.compName, compOccupancy: comp.compOcc,
       compConcessions: comp.compConc, compQualityTier: comp.compTier,
       compProductType: comp.compProd, compUnitCount: comp.compUnits,
-      compDataSource: comp.sources, compNotes: comp.compNotes
+      compDataSource: comp.sources, compNotes: comp.compNotes, compDistance: comp.compDistance
     };
     if (comp.compRows.length > 0) {
       comp.compRows.forEach(r => submissions.push({...compBase, ...r}));
@@ -3005,6 +3110,13 @@ function loadDraft(form) {
     // Trigger property badge display
     const propVal = document.getElementById('ann-your-property')?.value;
     if (propVal) handleAnnualPropertySelect();
+    // Re-apply additional-subjects checkbox state (the renderAdditionalSubjectsList
+    // rebuild during handleAnnualPropertySelect clears DOM state saved by id)
+    Object.entries(data).forEach(([id, val]) => {
+      if (!id.startsWith('addl-subj-')) return;
+      const el = document.getElementById(id);
+      if (el && el.type === 'checkbox') el.checked = !!val;
+    });
   }
 
   // For monthly: trigger property badge and restore num comps display
@@ -3163,6 +3275,21 @@ function validateForm(form) {
     else document.getElementById('mon-name')?.classList.remove('field-error');
     const occ = document.getElementById('subj-occupancy')?.value;
     if (!occ)   errors.push('Subject Property CoStar Occupancy is required');
+    // Each comp block must have a Distance from Subject (unless marked unable to collect)
+    document.querySelectorAll('[id^="mon-comp-"]').forEach(block => {
+      const bnum = block.id.replace('mon-comp-','');
+      if (!bnum.match(/^\d+$/)) return;
+      const unable = document.getElementById('unable_yes_'+bnum)?.checked;
+      if (unable) return;
+      const distField = document.getElementById('mon-comp-distance-'+bnum);
+      const cName = document.getElementById('mon-comp-name-'+bnum)?.value || ('Comp ' + bnum);
+      if (distField && !distField.value?.trim()) {
+        errors.push('Distance from Subject is required for ' + cName);
+        distField.classList.add('field-error');
+      } else if (distField) {
+        distField.classList.remove('field-error');
+      }
+    });
   } else {
     const isSubjectMode = (typeof annualEntryType !== 'undefined' && annualEntryType === 'subject');
     const annFields = [
